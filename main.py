@@ -1,16 +1,48 @@
-# This is a sample Python script.
-
-# Press Umschalt+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from gql import Client, gql
+from gql.transport.aiohttp import AIOHTTPTransport
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Strg+F8 to toggle the breakpoint.
+# Select your transport with a defined url endpoint
+transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",headers= {"authorization": "Bearer ae6d61b9faea4153a9ec062fa1101c39"})
 
+# Create a GraphQL client using the defined transport
+client = Client(transport=transport,fetch_schema_from_transport=True)
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Provide a GraphQL query
+query = gql(
+    """query ($documentId: ID!) {
+  node(id: $documentId) {
+    ... on Document {
+      id
+      case {
+        id
+        workItems(status: READY) {
+          edges {
+            node {
+              id
+              task {
+                id
+                slug
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
+"""
+)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+params = {"documentId": "RG9jdW1lbnQ6YTJmOGQwYTEtNWFhZS00MTM3LTkxZmMtYWViMjg5YTkzOWFh"}
+
+# Execute the query on the transport
+result = client.execute(query, variable_values=params)
+print(result)
