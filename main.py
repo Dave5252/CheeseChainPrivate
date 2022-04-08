@@ -1,109 +1,97 @@
-#Autorization
-import json
-
-import requests
+import json, time
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.requests import RequestsHTTPTransport
-
 import requests
 
-import requests
-
-cookies = {
-    '_ga': 'GA1.2.1564887654.1644181048',
-    'csrftoken': 'z6wSeXULo4qT8NBDyNwoKj9nvtSZtbtvTPTjHc8SxAxKtu64TpnOTpq9M2xMO1ca',
-    'op_browser_state': '884d8d3f0a32c2ccad65645bd282777765b42cbfef272ebc71f63a4d',
-    'sessionid': '4etqe1944pg1p1ywfmf0qrkv9ct1awyd'
-}
-
-headers = {
-    'authority': 'qs.fromarte.ch',
-    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-    'accept-language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,lb;q=0.6,id;q=0.5',
-    'cache-control': 'max-age=0',
-    # Requests sorts cookies= alphabetically
-    # 'cookie': '_ga=GA1.2.1564887654.1644181048; csrftoken=z6wSeXULo4qT8NBDyNwoKj9nvtSZtbtvTPTjHc8SxAxKtu64TpnOTpq9M2xMO1ca; op_browser_state=884d8d3f0a32c2ccad65645bd282777765b42cbfef272ebc71f63a4d; sessionid=4etqe1944pg1p1ywfmf0qrkv9ct1awyd',
-    'origin': 'https://qs.fromarte.ch',
-    'referer': 'https://qs.fromarte.ch/openid/authorize?client_id=pc&redirect_uri=https://qs.fromarte.ch/login&response_type=code&state=1d6b9868-ad9a-4429-a063-58671c307307&scope=openid%20profile%20caluma',
-    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'sec-fetch-dest': 'document',
-    'sec-fetch-mode': 'navigate',
-    'sec-fetch-site': 'same-origin',
-    'upgrade-insecure-requests': '1',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36',
-}
-
-data = {
-    'csrfmiddlewaretoken': 'h5AB9ntTugHp3mxOsreRgx66EMaichzWBOX2CCH0DMOgo32fN35hpDnSVlP5x7iB',
-    'client_id': 'pc',
-    'redirect_uri': 'https://qs.fromarte.ch/login',
-    'response_type': 'code',
-    'scope': 'openid profile caluma',
-    'state': '1d6b9868-ad9a-4429-a063-58671c307307',
-    'allow': 'Authorize'}
-
-
-
-
-
-transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",headers= {"authorization": "Bearer 4babc74f539f46829b17ff4807752759"})
-
-# Create a GraphQL client using the defined transport
-client = Client(transport=transport)
-
-
-
-# Provide a GraphQL query
-query = gql("""{
-  allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
-    edges {
-      node {
-        id
-        createdAt
-        createdByUser
-        task {
-          slug
-          __typename
-        }
-        case {
-          document {
-            id
-            form {
-              id
-              name
-              meta
-              source {
-                id
-                meta
-                __typename
-              }
-              __typename
-            }
-            __typename
-          }
-          __typename
-        }
-        __typename
-      }
-      __typename
+class handleData:
+    def __init__(self):
+        self.cookies = {
+        '_ga': 'GA1.2.409366753.1648130862',
+        'csrftoken': '5fHZozvMhzSYQcJyb1nFg3PROGBrKe0gor7QAWM04ixsE2BeX71yMexcD2GmFIUu',
+        'op_browser_state': '6dd3825f4c1719276a677a70bb1303f8ba9fcdb4ad5d0e9a4010c121',
+        'sessionid': 'quhnvolzwxistj9rph9kohzhf4pjxqg5',
     }
-    __typename
-  }
-}
-""")
+        self.headers  = {
+        'authority': 'qs.fromarte.ch',
+        'accept': 'application/json',
+        'accept-language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,lb;q=0.6,id;q=0.5',
+        # Requests sorts cookies= alphabetically
+        # 'cookie': '_ga=GA1.2.409366753.1648130862; csrftoken=5fHZozvMhzSYQcJyb1nFg3PROGBrKe0gor7QAWM04ixsE2BeX71yMexcD2GmFIUu; op_browser_state=6dd3825f4c1719276a677a70bb1303f8ba9fcdb4ad5d0e9a4010c121; sessionid=quhnvolzwxistj9rph9kohzhf4pjxqg5',
+        'origin': 'https://qs.fromarte.ch',
+        'referer': 'https://qs.fromarte.ch/qs',
+        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36',
+    }
+        # insert refresh-token
+        self.data  = {
+        'refresh_token': 'f9817fc2559b4d0ebb041bc6fc647a1b',
+        'client_id': 'pc',
+        'grant_type': 'refresh_token',
+        'redirect_uri': 'https://qs.fromarte.ch/login',
+    }
+
+    def getAuthToke(self):
+        response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
+        time.sleep(2)
+        response_data = response.json()
+        #self.data['refresh_token']=response_data["refresh_token"]
+        print(response_data["refresh_token"])
+        return response_data["access_token"]
+
+    def getAllWorkingItems(self):
+        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
+                                     headers={"authorization": "Bearer "+self.getAuthToke()})
+        client = Client(transport=transport)
+        # Provide a GraphQL query
+        query = gql("""{
+           allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
+             edges {
+               node {
+                 id
+                 createdAt
+                 createdByUser
+                 task {
+                   slug
+                   __typename
+                 }
+                 case {
+                   document {
+                     id
+                     form {
+                       id
+                       name
+                       meta
+                       source {
+                         id
+                         meta
+                         __typename
+                       }
+                       __typename
+                     }
+                     __typename
+                   }
+                   __typename
+                 }
+                 __typename
+               }
+               __typename
+             }
+             __typename
+           }
+         }
+         """)
+        return client.execute(query)
+
+    def saveAsJson(self, name):
+        with open(name+'.json', 'w', encoding='utf-8') as f:
+            json.dump(self.convertToJson(), f, ensure_ascii=False, indent=4)
 
 
-params = {"documentId": "RG9jdW1lbnQ6YTJmOGQwYTEtNWFhZS00MTM3LTkxZmMtYWViMjg5YTkzOWFh"}
+d = handleData()
+print(d.getAllWorkingItems())
 
-response = requests.post('https://qs.fromarte.ch/openid/authorize', headers=headers, cookies=cookies, data=data)
-print(response.status_code, response.text)
-result = client.execute(query)
-
-json_formatted_str = json.dumps(result, indent=2)
-json_formatted_str
-
-print(json_formatted_str)
-# Execute the query on the transport
