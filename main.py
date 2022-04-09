@@ -29,23 +29,28 @@ class handleData:
     }
         # insert refresh-token
         self.data  = {
-        'refresh_token': 'f9817fc2559b4d0ebb041bc6fc647a1b',
+        'refresh_token': '83559b355b5c4edc9a6140a79f879745',
         'client_id': 'pc',
         'grant_type': 'refresh_token',
         'redirect_uri': 'https://qs.fromarte.ch/login',
     }
+        self.authToken = "0"
 
-    def getAuthToke(self):
+    def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
         time.sleep(2)
         response_data = response.json()
-        #self.data['refresh_token']=response_data["refresh_token"]
-        print(response_data["refresh_token"])
-        return response_data["access_token"]
+        self.authToken = response_data["access_token"]
+        print(response_data)
+        self.data['refresh_token']= response_data["refresh_token"]
+        return response_data["refresh_token"]
+
+    def getAuthToekn(self):
+        return self.authToken
 
     def getAllWorkingItems(self):
         transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
-                                     headers={"authorization": "Bearer "+self.getAuthToke()})
+                                     headers={"authorization": "Bearer "+self.getAuthToekn()})
         client = Client(transport=transport)
         # Provide a GraphQL query
         query = gql("""{
@@ -85,13 +90,21 @@ class handleData:
            }
          }
          """)
-        return client.execute(query)
+        response = client.execute(query)
+        return response
 
-    def saveAsJson(self, name):
-        with open(name+'.json', 'w', encoding='utf-8') as f:
-            json.dump(self.convertToJson(), f, ensure_ascii=False, indent=4)
+    def saveAsJson(self, responseJson, nameOfJson):
+        with open(nameOfJson+'.json', 'w', encoding='utf-8') as f:
+            json.dump(responseJson,f, ensure_ascii=False, indent=4)
 
 
 d = handleData()
-print(d.getAllWorkingItems())
+
+while True:
+    d.refreshToken()
+
+    d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
+    time.sleep(250)
+
+
 
