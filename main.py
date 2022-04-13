@@ -29,19 +29,20 @@ class handleData:
     }
         # insert refresh-token
         self.data  = {
-        'refresh_token': '83559b355b5c4edc9a6140a79f879745',
+        'refresh_token': 'ae3f1fb7b752441e8744ab9120c2f7e4',
         'client_id': 'pc',
         'grant_type': 'refresh_token',
         'redirect_uri': 'https://qs.fromarte.ch/login',
     }
         self.authToken = "0"
+        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name"]
+        self.searchFilterMilkRelated = [""]
 
     def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
         time.sleep(2)
         response_data = response.json()
         self.authToken = response_data["access_token"]
-        print(response_data)
         self.data['refresh_token']= response_data["refresh_token"]
         return response_data["refresh_token"]
 
@@ -66,13 +67,13 @@ class handleData:
                  }
                  case {
                    document {
-                     id
+                     
                      form {
-                       id
+                       
                        name
                        meta
                        source {
-                         id
+                         
                          meta
                          __typename
                        }
@@ -97,6 +98,397 @@ class handleData:
         with open(nameOfJson+'.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson,f, ensure_ascii=False, indent=4)
 
+    def getDocument(self, docID):
+        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/", headers={"authorization": "Bearer " + self.getAuthToekn()})
+        client = Client(transport=transport)
+        # Provide a GraphQL query with th docID
+        query = gql("""{
+                  query DocumentAnswers($id: ID!) {
+  allDocuments(filter: [{id: $id}]) {
+    edges {
+      node {
+        id
+        form {
+          id
+          slug
+          __typename
+        }
+        workItem {
+          id
+          __typename
+        }
+        case {
+          id
+          workItems {
+            edges {
+              node {
+                id
+                task {
+                  id
+                  __typename
+                }
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        answers {
+          edges {
+            node {
+              ...FieldAnswer
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
+
+fragment SimpleQuestion on Question {
+  id
+  slug
+  label
+  isRequired
+  isHidden
+  meta
+  infoText
+  ... on TextQuestion {
+    textMinLength: minLength
+    textMaxLength: maxLength
+    textDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    placeholder
+    __typename
+  }
+  ... on TextareaQuestion {
+    textareaMinLength: minLength
+    textareaMaxLength: maxLength
+    textareaDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    placeholder
+    __typename
+  }
+  ... on IntegerQuestion {
+    integerMinValue: minValue
+    integerMaxValue: maxValue
+    integerDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    placeholder
+    __typename
+  }
+  ... on FloatQuestion {
+    floatMinValue: minValue
+    floatMaxValue: maxValue
+    floatDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    placeholder
+    __typename
+  }
+  ... on ChoiceQuestion {
+    choiceOptions: options {
+      edges {
+        node {
+          id
+          slug
+          label
+          isArchived
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    choiceDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    __typename
+  }
+  ... on MultipleChoiceQuestion {
+    multipleChoiceOptions: options {
+      edges {
+        node {
+          id
+          slug
+          label
+          isArchived
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    multipleChoiceDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    __typename
+  }
+  ... on DateQuestion {
+    dateDefaultAnswer: defaultAnswer {
+      id
+      value
+      __typename
+    }
+    __typename
+  }
+  ... on StaticQuestion {
+    staticContent
+    __typename
+  }
+  ... on CalculatedFloatQuestion {
+    calcExpression
+    __typename
+  }
+  ... on ActionButtonQuestion {
+    action
+    color
+    validateOnEnter
+    __typename
+  }
+  __typename
+}
+
+fragment FieldTableQuestion on Question {
+  id
+  ... on TableQuestion {
+    rowForm {
+      id
+      slug
+      questions {
+        edges {
+          node {
+            ...SimpleQuestion
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    tableDefaultAnswer: defaultAnswer {
+      id
+      value {
+        id
+        answers {
+          edges {
+            node {
+              id
+              question {
+                id
+                slug
+                __typename
+              }
+              ... on StringAnswer {
+                stringValue: value
+                __typename
+              }
+              ... on IntegerAnswer {
+                integerValue: value
+                __typename
+              }
+              ... on FloatAnswer {
+                floatValue: value
+                __typename
+              }
+              ... on ListAnswer {
+                listValue: value
+                __typename
+              }
+              ... on DateAnswer {
+                dateValue: value
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment FieldQuestion on Question {
+  id
+  ...SimpleQuestion
+  ...FieldTableQuestion
+  ... on FormQuestion {
+    subForm {
+      id
+      slug
+      name
+      questions {
+        edges {
+          node {
+            id
+            ...SimpleQuestion
+            ...FieldTableQuestion
+            ... on FormQuestion {
+              subForm {
+                id
+                slug
+                name
+                questions {
+                  edges {
+                    node {
+                      ...SimpleQuestion
+                      ...FieldTableQuestion
+                      __typename
+                    }
+                    __typename
+                  }
+                  __typename
+                }
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment SimpleAnswer on Answer {
+  id
+  question {
+    id
+    slug
+    __typename
+  }
+  ... on StringAnswer {
+    stringValue: value
+    __typename
+  }
+  ... on IntegerAnswer {
+    integerValue: value
+    __typename
+  }
+  ... on FloatAnswer {
+    floatValue: value
+    __typename
+  }
+  ... on ListAnswer {
+    listValue: value
+    __typename
+  }
+  ... on FileAnswer {
+    fileValue: value {
+      id
+      uploadUrl
+      downloadUrl
+      metadata
+      name
+      __typename
+    }
+    __typename
+  }
+  ... on DateAnswer {
+    dateValue: value
+    __typename
+  }
+  __typename
+}
+
+fragment FieldAnswer on Answer {
+  id
+  ...SimpleAnswer
+  ... on TableAnswer {
+    tableValue: value {
+      id
+      form {
+        id
+        slug
+        questions {
+          edges {
+            node {
+              ...FieldQuestion
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      answers {
+        edges {
+          node {
+            ...SimpleAnswer
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+
+                """)
+        params= {'documentId': docID}
+        response = client.execute(query, variable_values=params)
+        return response
+
+    def getRelevantInfoFromJson(self, json):
+        final = {}
+        if type(json) == dict:
+            for k, v in json.items():
+                if type(v) == dict or type(v) == list:
+                    final = final | self.getRelevantInfoFromJson(v)
+                if k in self.searchFilterAllWorkingItems:
+                    final[k] = v
+        elif type(json) == list:
+            for element in json:
+                final = final | self.getRelevantInfoFromJson(element)
+        return final
+
+
+
+
+
+
 
 d = handleData()
 
@@ -104,6 +496,10 @@ while True:
     d.refreshToken()
 
     d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
+    with open('AllWorkingItems.json', encoding='utf-8') as f:
+        loaded = json.load(f)
+        for node in loaded["allWorkItems"]["edges"]:
+            print(d.getRelevantInfoFromJson(node))
     time.sleep(250)
 
 
