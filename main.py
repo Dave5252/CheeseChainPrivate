@@ -29,14 +29,14 @@ class handleData:
     }
         # insert refresh-token
         self.data  = {
-        'refresh_token': 'ae3f1fb7b752441e8744ab9120c2f7e4',
+        'refresh_token': '370536c8861844a2b088418fae2018f9',
         'client_id': 'pc',
         'grant_type': 'refresh_token',
         'redirect_uri': 'https://qs.fromarte.ch/login',
     }
         self.authToken = "0"
-        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name"]
-        self.searchFilterMilkRelated = [""]
+        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
+        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer", ]
 
     def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
@@ -102,7 +102,7 @@ class handleData:
         transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/", headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
         # Provide a GraphQL query with th docID
-        query = gql("""{
+        query = gql("""
                   query DocumentAnswers($id: ID!) {
   allDocuments(filter: [{id: $id}]) {
     edges {
@@ -467,10 +467,11 @@ fragment FieldAnswer on Answer {
 
 
                 """)
-        params= {'documentId': docID}
+        params= {"id": docID}
         response = client.execute(query, variable_values=params)
         return response
 
+    #only works if there are not more than one k, v pair wih the same key
     def getRelevantInfoFromJson(self, json):
         final = {}
         if type(json) == dict:
@@ -495,7 +496,9 @@ d = handleData()
 while True:
     d.refreshToken()
 
-    d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
+    #d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
+    d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
+
     with open('AllWorkingItems.json', encoding='utf-8') as f:
         loaded = json.load(f)
         for node in loaded["allWorkItems"]["edges"]:
