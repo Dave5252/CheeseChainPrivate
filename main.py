@@ -486,26 +486,18 @@ fragment FieldAnswer on Answer {
         return final
 
 
-    def getRelevantInfoFromJsonAnswers(self, json, words = None):
-        if words:
-            searchWords = words
-        else:searchWords = self.searchFilterMilkRelated
+    def getRelevantInfoFromJsonAnswers(self, jsonname):
         final = {}
-        if type(json) == dict:
-            for k, v in json.items():
-                if type(v) == dict or type(v) == list:
-                    final = final | self.getRelevantInfoFromJsonAnswers(v)
-                if v in searchWords:
-                    final = final | self.getRelevantInfoFromJsonAnswers(json,list("value"))
-                    if len(searchWords) == 1:
-                        if searchWords[0] in k:
-                            final[searchWords[0]] = v
-
-        elif type(json) == list:
-            for element in json:
-                final = final | self.getRelevantInfoFromJsonAnswers(element)
+        with open(jsonname, encoding='utf-8') as f:
+            loaded = json.load(f)
+            for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
+                nodeJson = {}
+                if node["question"]["slug"] in self.searchFilterMilkRelated:
+                    for k,v in node:
+                        if "value" in k:
+                            nodeJson["val"] = v
+                    final[node["question"]["slug"]] = nodeJson
         return final
-
 
 
 
@@ -523,10 +515,8 @@ while True:
        #     print(d.getRelevantInfoFromJsonAllWorkingItems(node))
 
 
-    with open('DocAnswer.json', encoding='utf-8') as f:
-        loaded = json.load(f)
-        for node in loaded["allDocuments"]["edges"]:
-            print(d.getRelevantInfoFromJsonAnswers(node))
+
+    print(d.getRelevantInfoFromJsonAnswers('DocAnswer.json'))
 
     time.sleep(250)
 
