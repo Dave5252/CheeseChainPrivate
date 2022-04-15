@@ -29,14 +29,14 @@ class handleData:
     }
         # insert refresh-token
         self.data  = {
-        'refresh_token': '370536c8861844a2b088418fae2018f9',
+        'refresh_token': '2faa6fb896da4ebfac7410171a771662',
         'client_id': 'pc',
         'grant_type': 'refresh_token',
         'redirect_uri': 'https://qs.fromarte.ch/login',
     }
         self.authToken = "0"
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
-        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer", ]
+        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer", "1014-10-temperatur-gelagerte-milch", "1014-10-milchmenge"]
 
     def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
@@ -472,21 +472,39 @@ fragment FieldAnswer on Answer {
         return response
 
     #only works if there are not more than one k, v pair wih the same key
-    def getRelevantInfoFromJson(self, json):
+    def getRelevantInfoFromJsonAllWorkingItems(self, json):
         final = {}
         if type(json) == dict:
             for k, v in json.items():
                 if type(v) == dict or type(v) == list:
-                    final = final | self.getRelevantInfoFromJson(v)
+                    final = final | self.getRelevantInfoFromJsonAllWorkingItems(v)
                 if k in self.searchFilterAllWorkingItems:
                     final[k] = v
         elif type(json) == list:
             for element in json:
-                final = final | self.getRelevantInfoFromJson(element)
+                final = final | self.getRelevantInfoFromJsonAllWorkingItems(element)
         return final
 
 
+    def getRelevantInfoFromJsonAnswers(self, json, words = None):
+        if words:
+            searchWords = words
+        else:searchWords = self.searchFilterMilkRelated
+        final = {}
+        if type(json) == dict:
+            for k, v in json.items():
+                if type(v) == dict or type(v) == list:
+                    final = final | self.getRelevantInfoFromJsonAnswers(v)
+                if v in searchWords:
+                    final = final | self.getRelevantInfoFromJsonAnswers(json,list("value"))
+                    if len(searchWords) == 1:
+                        if searchWords[0] in k:
+                            final[searchWords[0]] = v
 
+        elif type(json) == list:
+            for element in json:
+                final = final | self.getRelevantInfoFromJsonAnswers(element)
+        return final
 
 
 
@@ -494,15 +512,22 @@ fragment FieldAnswer on Answer {
 d = handleData()
 
 while True:
-    d.refreshToken()
+    #d.refreshToken()
 
     #d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
-    d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
+    #d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
 
-    with open('AllWorkingItems.json', encoding='utf-8') as f:
+    #with open('AllWorkingItems.json', encoding='utf-8') as f:
+     #   loaded = json.load(f)
+      #  for node in loaded["allWorkItems"]["edges"]:
+       #     print(d.getRelevantInfoFromJsonAllWorkingItems(node))
+
+
+    with open('DocAnswer.json', encoding='utf-8') as f:
         loaded = json.load(f)
-        for node in loaded["allWorkItems"]["edges"]:
-            print(d.getRelevantInfoFromJson(node))
+        for node in loaded["allDocuments"]["edges"]:
+            print(d.getRelevantInfoFromJsonAnswers(node))
+
     time.sleep(250)
 
 
