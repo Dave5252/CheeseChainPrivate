@@ -36,7 +36,7 @@ class handleData:
     }
         self.authToken = "0"
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
-        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer", "1014-10-temperatur-gelagerte-milch", "1014-10-milchmenge"]
+        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer", "1014-10-uhrzeit","1014-10-temperatur", "1014-10-temperatur-gelagerte-milch", "1014-10-milchmenge", "1014-10-stuckzahl-produzierte-kase"]
 
     def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies, data=self.data)
@@ -490,13 +490,23 @@ fragment FieldAnswer on Answer {
         final = {}
         with open(jsonname, encoding='utf-8') as f:
             loaded = json.load(f)
+            #chechk all awnsew nodes
             for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
-                nodeJson = {}
-                if node["question"]["slug"] in self.searchFilterMilkRelated:
-                    for k,v in node:
-                        if "value" in k:
-                            nodeJson["val"] = v
-                    final[node["question"]["slug"]] = nodeJson
+                if node['node']['question']['slug'] in self.searchFilterMilkRelated:
+                    for k in node['node']:
+                        if "Value" in k:
+                            final[node['node']["question"]["slug"]] = node['node'][k]
+
+                # check all the tables
+                try:
+                    if node['node']['tableValue']:
+                        for awnserNode in node['node']["tableValue"][0]["answers"]["edges"]:
+                            if awnserNode['node']['question']['slug'] in self.searchFilterMilkRelated:
+                                for k in awnserNode['node']:
+                                    if "Value" in k:
+                                        final[awnserNode['node']["question"]["slug"]] = awnserNode['node'][k]
+                except: pass
+
         return final
 
 
@@ -509,12 +519,16 @@ while True:
     #d.saveAsJson(d.getAllWorkingItems(),"AllWorkingItems")
     #d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
 
-    #with open('AllWorkingItems.json', encoding='utf-8') as f:
-     #   loaded = json.load(f)
-      #  for node in loaded["allWorkItems"]["edges"]:
-       #     print(d.getRelevantInfoFromJsonAllWorkingItems(node))
-
-
+    with open('AllWorkingItems.json', encoding='utf-8') as f:
+        loaded = json.load(f)
+        with open('BackUp.json', 'w', encoding='utf-8') as jsonFile:
+            final = {}
+            for node in loaded["allWorkItems"]["edges"]:
+                nested = {}
+                relData = d.getRelevantInfoFromJsonAllWorkingItems(node)
+                nested[relData["id"]] = relData
+                final.update(nested)
+            json.dump(final, jsonFile, indent=2)
 
     print(d.getRelevantInfoFromJsonAnswers('DocAnswer.json'))
 
