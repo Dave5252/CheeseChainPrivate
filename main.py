@@ -8,8 +8,8 @@ def main():
     d = handleData()
 
     while True:
-        d.refreshToken()
-        d.saveAsJson(d.getAllWorkingItems(), "AllWorkingItems")
+        #d.refreshToken()
+        #d.saveAsJson(d.getAllWorkingItems(), "AllWorkingItems")
         # d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
 
         with open('AllWorkingItems.json', encoding='utf-8') as f:
@@ -21,9 +21,9 @@ def main():
                     nested = {}
                     relData = d.getRelevantInfoFromJsonAllWorkingItems(node)
                     # sort by ID
+                    #d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"), "DocAnswer")
+                    relData["awsners"] = d.getRelevantInfoFromJsonAnswers('DocAnswer.json')
                     nested[relData["id"]] = relData
-                    d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"), "DocAnswer")
-                    nested["awsners"] = d.getRelevantInfoFromJsonAnswers('DocAnswer.json')
 
                     final.update(nested)
                 json.dump(final, jsonFile, indent=2)
