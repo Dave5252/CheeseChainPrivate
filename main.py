@@ -8,25 +8,26 @@ def main():
     d = handleData()
 
     while True:
-        #d.refreshToken()
-        #d.saveAsJson(d.getAllWorkingItems(), "AllWorkingItems")
-        # d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"),"DocAnswer")
+        d.refreshToken()
+        d.saveAsJson(d.getAllWorkingItems(), "AllWorkingItems")
 
-        with open('AllWorkingItems.json', encoding='utf-8') as f:
+
+        with open(r'C:\Users\ddien\SOPRA\BA-Code\AllWorkingItems.json', encoding='utf-8') as f:
             loaded = json.load(f)
             # save the relevant data inside a nested json called BackUp
             with open('BackUp.json', 'w', encoding='utf-8') as jsonFile:
                 final = {}
                 for node in loaded["allWorkItems"]["edges"]:
                     nested = {}
-                    relData = d.getRelevantInfoFromJsonAllWorkingItems(node)
+                    relevantData = d.getRelevantInfoFromJsonAllWorkingItems(node)
                     # sort by ID
-                    #d.saveAsJson(d.getDocument("f4f0d363-960f-4561-8de5-0dbd51669901"), "DocAnswer")
-                    relData["awsners"] = d.getRelevantInfoFromJsonAnswers('DocAnswer.json')
-                    nested[relData["id"]] = relData
-
+                    IDofCurrentNode = node["node"]["case"]["document"]["id"]
+                    d.saveAsJson(d.getDocument(IDofCurrentNode), "Answer_"+ IDofCurrentNode)
+                    relevantData["awsners"] = d.getRelevantInfoFromJsonAnswers("Answer_"+IDofCurrentNode+".json")
+                    nested[relevantData["id"]] = relevantData
                     final.update(nested)
                 json.dump(final, jsonFile, indent=2)
+                print("done")
 
 
 
