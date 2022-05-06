@@ -30,7 +30,7 @@ class handleData:
         }
         # insert refresh-token
         self.data = {
-            'refresh_token': 'e253149054f646f9a3a08e271752b747',
+            'refresh_token': 'dbb5143636f04d2a89d7a8f12af8ecde',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://qs.fromarte.ch/login',
@@ -39,7 +39,7 @@ class handleData:
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
         self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer",
                                         "1014-10-uhrzeit", "1014-10-temperatur", "1014-10-temperatur-gelagerte-milch",
-                                        "1014-10-milchmenge", "1014-10-stuckzahl-produzierte-kase", "1014-10-datum", "1014-10-kultur"]
+                                        "1014-10-stuckzahl-produzierte-kase", "1014-10-datum", "1014-10-kultur"]
 
     def refreshToken(self, ):
         response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
@@ -62,36 +62,25 @@ class handleData:
            allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
              edges {
                node {
-
                  createdAt
                  createdByUser
                  task {
                    slug
-                   __typename
                  }
                  case {
                    document {
                      id
                      form {
-
                        name
                        meta
                        source {
-
                          meta
-                         __typename
                        }
-                       __typename
                      }
-                     __typename
                    }
-                   __typename
                  }
-                 __typename
                }
-               __typename
              }
-             __typename
            }
          }
          """)
@@ -494,7 +483,8 @@ fragment FieldAnswer on Answer {
         final = {}
         with open(jsonname, encoding='utf-8') as f:
             loaded = json.load(f)
-            # chechk all awnsew nodes
+
+            # check all answer nodes
             for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
                 if node['node']['question']['slug'] in self.searchFilterMilkRelated:
                     for k in node['node']:

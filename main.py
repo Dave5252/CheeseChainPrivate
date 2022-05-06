@@ -23,7 +23,7 @@ def main():
                     # sort by ID
                     IDofCurrentNode = node["node"]["case"]["document"]["id"]
                     d.saveAsJson(d.getDocument(IDofCurrentNode), "Answer_"+ IDofCurrentNode)
-                    relevantData["awsners"] = d.getRelevantInfoFromJsonAnswers("Answer_"+IDofCurrentNode+".json")
+                    relevantData["answer"] = d.getRelevantInfoFromJsonAnswers("Answer_"+IDofCurrentNode+".json")
                     nested[relevantData["id"]] = relevantData
                     final.update(nested)
                 json.dump(final, jsonFile, indent=2)
