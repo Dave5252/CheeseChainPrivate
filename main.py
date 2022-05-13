@@ -1,4 +1,5 @@
 import json
+import os
 import time
 
 from HandleData import handleData
@@ -22,12 +23,15 @@ def main():
                     relevantData = d.getRelevantInfoFromJsonAllWorkingItems(node)
                     # sort by ID
                     IDofCurrentNode = node["node"]["case"]["document"]["id"]
-                    d.saveAsJson(d.getDocument(IDofCurrentNode), "Answer_"+ IDofCurrentNode)
+                    os.chdir(r"C:\Users\ddien\SOPRA\BA-Code\Answer")
+                    d.saveAsJson(d.getDocument(IDofCurrentNode, d.getAnswerQuery), "Answer_"+ IDofCurrentNode, True)
                     relevantData["answer"] = d.getRelevantInfoFromJsonAnswers("Answer_"+IDofCurrentNode+".json")
                     nested[relevantData["id"]] = relevantData
                     final.update(nested)
                 json.dump(final, jsonFile, indent=2)
+                os.chdir(r"C:\Users\ddien\SOPRA\BA-Code")
                 print("done")
+                print(d.update())
 
 
 

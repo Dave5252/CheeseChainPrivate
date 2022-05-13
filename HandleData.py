@@ -1,4 +1,6 @@
 import json, time
+import os
+from datetime import datetime
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests
@@ -30,73 +32,14 @@ class handleData:
         }
         # insert refresh-token
         self.data = {
-            'refresh_token': 'dbb5143636f04d2a89d7a8f12af8ecde',
+            'refresh_token': 'e10f97859bae4a35829b213b5bf5a24a',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://qs.fromarte.ch/login',
         }
         self.authToken = "0"
-        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
-        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer",
-                                        "1014-10-uhrzeit", "1014-10-temperatur", "1014-10-temperatur-gelagerte-milch",
-                                        "1014-10-stuckzahl-produzierte-kase", "1014-10-datum", "1014-10-kultur"]
-
-    def refreshToken(self, ):
-        response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
-                                 data=self.data)
-        time.sleep(2)
-        response_data = response.json()
-        self.authToken = response_data["access_token"]
-        self.data['refresh_token'] = response_data["refresh_token"]
-        return response_data["refresh_token"]
-
-    def getAuthToekn(self):
-        return self.authToken
-
-    def getAllWorkingItems(self):
-        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
-                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
-        client = Client(transport=transport)
-        # Provide a GraphQL query
-        query = gql("""{
-           allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
-             edges {
-               node {
-                 createdAt
-                 createdByUser
-                 task {
-                   slug
-                 }
-                 case {
-                   document {
-                     id
-                     form {
-                       name
-                       meta
-                       source {
-                         meta
-                       }
-                     }
-                   }
-                 }
-               }
-             }
-           }
-         }
-         """)
-        response = client.execute(query)
-        return response
-
-    def saveAsJson(self, responseJson, nameOfJson):
-        with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
-            json.dump(responseJson, f, ensure_ascii=False, indent=4)
-
-    def getDocument(self, docID):
-        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
-                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
-        client = Client(transport=transport)
-        # Provide a GraphQL query with th docID
-        query = gql("""
+        self.dateTimeIso = datetime.now().isoformat()
+        self.getAnswerQuery = """
                   query DocumentAnswers($id: ID!) {
   allDocuments(filter: [{id: $id}]) {
     edges {
@@ -460,8 +403,100 @@ fragment FieldAnswer on Answer {
 }
 
 
-                """)
+                """
+        self.getHistAnswerQuery = """query hsitData{
+  documentAsOf(id: "RG9jdW1lbnQ6ZjdjMzI3ZmEtMWFhNS00NThiLTk3ZGUtYmExN2UwMGZmMWM2", asOf: "2022-05-13T15:40:16+00:00"){
+    historyUserId
+    createdByUser
+    createdAt
+    modifiedByGroup
+    historicalAnswers(asOf: "2022-05-13T15:32:16+00:00"){
+      edges{
+        node{
+          id
+          createdAt
+          historyDate
+          meta
+          historyUserId
+          historyType
+          createdByUser
+          question{
+            slug
+            label
+            
+          }
+        }
+      }
+    }
+  }
+}
+
+
+"""
+        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
+        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer",
+                                        "1014-10-uhrzeit", "1014-10-temperatur", "1014-10-temperatur-gelagerte-milch",
+                                        "1014-10-stuckzahl-produzierte-kase", "1014-10-datum", "1014-10-kultur"]
+
+    def refreshToken(self, ):
+        response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
+                                 data=self.data)
+        time.sleep(2)
+        response_data = response.json()
+        self.authToken = response_data["access_token"]
+        self.data['refresh_token'] = response_data["refresh_token"]
+        return response_data["refresh_token"]
+
+    def getAuthToekn(self):
+        return self.authToken
+
+    def getAllWorkingItems(self):
+        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
+                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
+        client = Client(transport=transport)
+        # Provide a GraphQL query
+        query = gql("""{
+           allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
+             edges {
+               node {
+                 createdAt
+                 createdByUser
+                 task {
+                   slug
+                 }
+                 case {
+                   document {
+                     id
+                     form {
+                       name
+                       meta
+                       source {
+                         meta
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
+         """)
+        response = client.execute(query)
+        return response
+
+    def saveAsJson(self, responseJson, nameOfJson, changewd=False):
+        with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
+            json.dump(responseJson, f, ensure_ascii=False, indent=4)
+
+    def getDocument(self, docID, query, dateTime=False):
+        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
+                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
+        client = Client(transport=transport)
+        # Provide a GraphQL query with th docID
+        query = gql(query)
         params = {"id": docID}
+        if dateTime:
+            params['dateTime'] = self.dateTimeIso
         response = client.execute(query, variable_values=params)
         return response
 
@@ -478,6 +513,14 @@ fragment FieldAnswer on Answer {
             for element in json:
                 final = final | self.getRelevantInfoFromJsonAllWorkingItems(element)
         return final
+
+    def update(self):
+        os.chdir(r"C:\Users\ddien\SOPRA\BA-Code\Answer")
+        for item in os.listdir():
+            open(item, "r")
+            returnedJson = self.getDocument(item[6:].strip(".json"), self.getHistAnswerQuery, dateTime=True)
+            return returnedJson
+        # May need some rework
 
     def getRelevantInfoFromJsonAnswers(self, jsonname):
         final = {}
