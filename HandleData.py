@@ -9,34 +9,37 @@ import requests
 class handleData:
     def __init__(self):
         self.cookies = {
-            '_ga': 'GA1.2.409366753.1648130862',
-            'csrftoken': '5fHZozvMhzSYQcJyb1nFg3PROGBrKe0gor7QAWM04ixsE2BeX71yMexcD2GmFIUu',
-            'op_browser_state': '6dd3825f4c1719276a677a70bb1303f8ba9fcdb4ad5d0e9a4010c121',
-            'sessionid': 'quhnvolzwxistj9rph9kohzhf4pjxqg5',
+            '_ga': 'GA1.2.1564887654.1644181048',
+            'csrftoken': 'YewbsaeZsQTbbUrSWw68XUhTOsnm3l9ez2sfXytUIrYcly33qgMHbc6Mr2iwM2r0',
+            'op_browser_state': 'e1b5449746b83db4d810aa2100c5afc8c449baf9f03dc03cd65519ff',
+            'sessionid': 'kacgu0pq36y7tq89vu16uw825rh3ub49',
         }
+
         self.headers = {
-            'authority': 'qs.fromarte.ch',
+            'authority': 'beta.qs.fromarte.ch',
             'accept': 'application/json',
             'accept-language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7,lb;q=0.6,id;q=0.5',
             # Requests sorts cookies= alphabetically
-            # 'cookie': '_ga=GA1.2.409366753.1648130862; csrftoken=5fHZozvMhzSYQcJyb1nFg3PROGBrKe0gor7QAWM04ixsE2BeX71yMexcD2GmFIUu; op_browser_state=6dd3825f4c1719276a677a70bb1303f8ba9fcdb4ad5d0e9a4010c121; sessionid=quhnvolzwxistj9rph9kohzhf4pjxqg5',
-            'origin': 'https://qs.fromarte.ch',
-            'referer': 'https://qs.fromarte.ch/qs',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"',
+            # 'cookie': '_ga=GA1.2.1564887654.1644181048; csrftoken=YewbsaeZsQTbbUrSWw68XUhTOsnm3l9ez2sfXytUIrYcly33qgMHbc6Mr2iwM2r0; op_browser_state=e1b5449746b83db4d810aa2100c5afc8c449baf9f03dc03cd65519ff; sessionid=kacgu0pq36y7tq89vu16uw825rh3ub49',
+            'origin': 'https://beta.qs.fromarte.ch',
+            'referer': 'https://beta.qs.fromarte.ch/qs',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-origin',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
         }
-        # insert refresh-token
+
         self.data = {
-            'refresh_token': 'e10f97859bae4a35829b213b5bf5a24a',
+            'refresh_token': 'eb9726113e0e4f2e8f5c01cee81d942a',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
-            'redirect_uri': 'https://qs.fromarte.ch/login',
+            'redirect_uri': 'https://beta.qs.fromarte.ch/login',
         }
+
+
         self.authToken = "0"
         self.dateTimeIso = datetime.now().isoformat()
         self.getAnswerQuery = """
@@ -404,13 +407,13 @@ fragment FieldAnswer on Answer {
 
 
                 """
-        self.getHistAnswerQuery = """query hsitData{
-  documentAsOf(id: "RG9jdW1lbnQ6ZjdjMzI3ZmEtMWFhNS00NThiLTk3ZGUtYmExN2UwMGZmMWM2", asOf: "2022-05-13T15:40:16+00:00"){
+        self.getHistAnswerQuery = """query hsitData($id: ID!, $dateTime: DateTime!){
+  documentAsOf(asOf: $dateTime, id:$id){
     historyUserId
     createdByUser
     createdAt
     modifiedByGroup
-    historicalAnswers(asOf: "2022-05-13T15:32:16+00:00"){
+    historicalAnswers(asOf: $dateTime){
       edges{
         node{
           id
@@ -434,24 +437,23 @@ fragment FieldAnswer on Answer {
 
 """
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
-        self.searchFilterMilkRelated = ["1014-10-milchmenge", "1014-10-lab-lot-nummer", "1014-10-kultur-lotnummer",
-                                        "1014-10-uhrzeit", "1014-10-temperatur", "1014-10-temperatur-gelagerte-milch",
-                                        "1014-10-stuckzahl-produzierte-kase", "1014-10-datum", "1014-10-kultur"]
+        self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
+                                        "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
+                                        "833-10-stuckzahl-produzierte-kase", "833-10-datum", "833-10-kultur"]
 
-    def refreshToken(self, ):
-        response = requests.post('https://qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
+    def refreshToken(self):
+        response = requests.post('https://beta.qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
                                  data=self.data)
         time.sleep(2)
         response_data = response.json()
         self.authToken = response_data["access_token"]
         self.data['refresh_token'] = response_data["refresh_token"]
-        return response_data["refresh_token"]
 
     def getAuthToekn(self):
         return self.authToken
 
     def getAllWorkingItems(self):
-        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
+        transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
         # Provide a GraphQL query
@@ -484,12 +486,12 @@ fragment FieldAnswer on Answer {
         response = client.execute(query)
         return response
 
-    def saveAsJson(self, responseJson, nameOfJson, changewd=False):
+    def saveAsJson(self, responseJson, nameOfJson):
         with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson, f, ensure_ascii=False, indent=4)
 
     def getDocument(self, docID, query, dateTime=False):
-        transport = AIOHTTPTransport(url="https://qs.fromarte.ch/graphql/",
+        transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
         # Provide a GraphQL query with th docID
@@ -515,11 +517,11 @@ fragment FieldAnswer on Answer {
         return final
 
     def update(self):
-        os.chdir(r"C:\Users\ddien\SOPRA\BA-Code\Answer")
+        os.chdir(r"C:\Users\David\Desktop\BA Code\Anwers")
         for item in os.listdir():
             open(item, "r")
-            returnedJson = self.getDocument(item[6:].strip(".json"), self.getHistAnswerQuery, dateTime=True)
-            return returnedJson
+            returnedJson = self.getDocument(item[7:].strip(".json"), self.getHistAnswerQuery, dateTime=True)
+            print(returnedJson)
         # May need some rework
 
     def getRelevantInfoFromJsonAnswers(self, jsonname):
