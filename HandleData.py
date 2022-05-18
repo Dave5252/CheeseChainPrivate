@@ -33,7 +33,7 @@ class handleData:
         }
 
         self.data = {
-            'refresh_token': 'eb9726113e0e4f2e8f5c01cee81d942a',
+            'refresh_token': 'a8bb1cd781de493ba69d01bf5290c2d3',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -517,34 +517,53 @@ fragment FieldAnswer on Answer {
         return final
 
     def update(self):
-        os.chdir(r"C:\Users\David\Desktop\BA Code\Anwers")
-        for item in os.listdir():
-            open(item, "r")
-            returnedJson = self.getDocument(item[7:].strip(".json"), self.getHistAnswerQuery, dateTime=True)
-            print(returnedJson)
-        # May need some rework
+        with open("BackUp.json", encoding='utf-8') as f:
+            for node in json.load(f).items():
+                returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
+                #check if something was changed with "~" and if the answer is relevant
+                newanswers = []
+                for historicalAnswer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
+                    question = historicalAnswer["node"]["question"]["slug"]
+                    if historicalAnswer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated:
+                        # something was altered or deleted
+                        newanswers.append(question)
+                    elif question in self.searchFilterMilkRelated and question not in node[1]['answer']:
+                        #check if a new relevant aswer was given
+                        newanswers.append(question)
+                # check if new answers were found
+                if newanswers:
+                    print(self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers))
 
-    def getRelevantInfoFromJsonAnswers(self, jsonname):
+
+
+
+
+    # May need some rework
+    def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
+        if searchwords is None:
+            searchwords = self.searchFilterMilkRelated
         final = {}
-        with open(jsonname, encoding='utf-8') as f:
-            loaded = json.load(f)
+        if type(jsonname) == str:
+            with open(jsonname, encoding='utf-8') as f:
+                loaded = json.load(f)
+        else:loaded = jsonname
 
             # check all answer nodes
-            for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
-                if node['node']['question']['slug'] in self.searchFilterMilkRelated:
-                    for k in node['node']:
-                        if "Value" in k:
-                            final[node['node']["question"]["slug"]] = node['node'][k]
+        for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
+            if node['node']['question']['slug'] in searchwords:
+                for k in node['node']:
+                    if "Value" in k:
+                        final[node['node']["question"]["slug"]] = node['node'][k]
 
-                # check all the tables
-                try:
-                    if node['node']['tableValue']:
-                        for awnserNode in node['node']["tableValue"][0]["answers"]["edges"]:
-                            if awnserNode['node']['question']['slug'] in self.searchFilterMilkRelated:
-                                for k in awnserNode['node']:
-                                    if "Value" in k:
-                                        final[awnserNode['node']["question"]["slug"]] = awnserNode['node'][k]
-                except:
-                    pass
+            # check all the tables
+            try:
+                if node['node']['tableValue']:
+                    for awnserNode in node['node']["tableValue"][0]["answers"]["edges"]:
+                        if awnserNode['node']['question']['slug'] in searchwords:
+                            for k in awnserNode['node']:
+                                if "Value" in k:
+                                    final[awnserNode['node']["question"]["slug"]] = awnserNode['node'][k]
+            except:
+                pass
 
         return final

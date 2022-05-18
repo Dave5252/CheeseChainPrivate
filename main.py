@@ -5,13 +5,15 @@ import time
 from HandleData import handleData
 
 
-def main():
+def ttest():
     d = handleData()
     d.refreshToken()
+    d.update()
 
-
-
+def main():
+    d = handleData()
     while True:
+
         d.refreshToken()
         d.saveAsJson(d.getAllWorkingItems(), "AllWorkingItems")
 
@@ -33,7 +35,8 @@ def main():
                 json.dump(final, jsonFile, indent=2)
                 os.chdir(r"C:\Users\David\Desktop\BA Code")
                 print("done")
-            print(d.update())
+        d.update()
+
         time.sleep(250)
 if __name__ == '__main__':
     main()
