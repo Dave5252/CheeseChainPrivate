@@ -33,7 +33,7 @@ class handleData:
         }
 
         self.data = {
-            'refresh_token': 'a8bb1cd781de493ba69d01bf5290c2d3',
+            'refresh_token': '1ec92b1f5ffe45d8bddd5935f3f080d7',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -486,6 +486,7 @@ fragment FieldAnswer on Answer {
         response = client.execute(query)
         return response
 
+    #save a doc as JSON
     def saveAsJson(self, responseJson, nameOfJson):
         with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson, f, ensure_ascii=False, indent=4)
@@ -516,6 +517,7 @@ fragment FieldAnswer on Answer {
                 final = final | self.getRelevantInfoFromJsonAllWorkingItems(element)
         return final
 
+    # check if a relevant answer was altered
     def update(self):
         with open("BackUp.json", encoding='utf-8') as f:
             for node in json.load(f).items():
