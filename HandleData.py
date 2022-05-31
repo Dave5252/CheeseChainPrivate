@@ -33,7 +33,7 @@ class handleData:
         }
 
         self.data = {
-            'refresh_token': '1ec92b1f5ffe45d8bddd5935f3f080d7',
+            'refresh_token': '06ae25b1da284ee0aaac79cceefb6bb5',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -436,7 +436,7 @@ fragment FieldAnswer on Answer {
 
 
 """
-        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "category"]
+        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
         self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
                                         "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
                                         "833-10-stuckzahl-produzierte-kase", "833-10-datum", "833-10-kultur"]
@@ -457,8 +457,8 @@ fragment FieldAnswer on Answer {
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
         # Provide a GraphQL query
-        query = gql("""{
-           allWorkItems(status: READY, orderBy: CREATED_AT_DESC) {
+        query = gql(""" {
+           allWorkItems(orderBy: CREATED_AT_DESC) {
              edges {
                node {
                  createdAt
@@ -467,14 +467,12 @@ fragment FieldAnswer on Answer {
                    slug
                  }
                  case {
+                  status
                    document {
                      id
                      form {
                        name
-                       meta
-                       source {
-                         meta
-                       }
+                       
                      }
                    }
                  }
@@ -521,6 +519,9 @@ fragment FieldAnswer on Answer {
     def update(self):
         with open("BackUp.json", encoding='utf-8') as f:
             for node in json.load(f).items():
+                # check if the document is already frozen
+                if node[1]['status'] != 'RUNNING':
+                    continue
                 returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
                 #check if something was changed with "~" and if the answer is relevant
                 newanswers = []
