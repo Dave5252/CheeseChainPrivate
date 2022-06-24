@@ -6,7 +6,7 @@ from gql.transport.aiohttp import AIOHTTPTransport
 import requests
 
 
-class handleData:
+class HandleData:
     def __init__(self):
         self.cookies = {
             '_ga': 'GA1.2.1564887654.1644181048',
@@ -511,7 +511,7 @@ fragment FieldAnswer on Answer {
         # Provide a GraphQL query with the docID
         query = gql(query)
         params = {"id": docID}
-        # DateTime may be relevant when fetching the document again
+        # DateTime may be relevant when fetching historical answers
         if dateTime:
             params['dateTime'] = self.dateTimeIso
         response = client.execute(query, variable_values=params)
@@ -543,6 +543,7 @@ fragment FieldAnswer on Answer {
         If something was deleted or altered it will be indicated with a "~", a "+" indicate that an new answer was given.
         The Functions then updates the new or altered answers on the JSON. XXXXXXXXXXXXXXXXXXXXXX
         """
+
         with open("BackUp.json", encoding='utf-8') as f:
             for node in json.load(f).items():
                 # check if the document is already frozen
@@ -563,6 +564,11 @@ fragment FieldAnswer on Answer {
                 if newanswers:
                     print(self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers))
                     print(node[1]['id'])
+                # TODO: sending new info to SC
+
+    def checkForNewFiles(self):
+        # TODO: Check if new files were added.
+        pass
 
     # May need some rework
     def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
@@ -599,4 +605,4 @@ fragment FieldAnswer on Answer {
             except:
                 pass
 
-        return final
+        return final # TODO. Sending info to SC

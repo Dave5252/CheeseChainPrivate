@@ -2,16 +2,16 @@ import json
 import os
 import time
 
-from HandleData import handleData
+from HandleData import HandleData
 
 
-def ttest():
-    d = handleData()
+def main():
+    d = HandleData()
     d.refreshToken()
     d.update()
 
-def main():
-    d = handleData()
+def ff():
+    d = HandleData()
     while True:
 
         d.refreshToken()
