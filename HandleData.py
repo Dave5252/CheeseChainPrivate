@@ -33,12 +33,11 @@ class handleData:
         }
 
         self.data = {
-            'refresh_token': '06ae25b1da284ee0aaac79cceefb6bb5',
+            'refresh_token': '598269a4d381404490081b6e69efe387',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
         }
-
 
         self.authToken = "0"
         self.dateTimeIso = datetime.now().isoformat()
@@ -453,6 +452,10 @@ fragment FieldAnswer on Answer {
         return self.authToken
 
     def getAllWorkingItems(self):
+        """
+        Returns a JSON with all the open forms and corresponding information (i.e. UserID of creator, creation date)
+        :return: Returns the received JSON.
+        """
         transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
@@ -484,18 +487,31 @@ fragment FieldAnswer on Answer {
         response = client.execute(query)
         return response
 
-    #save a doc as JSON
     def saveAsJson(self, responseJson, nameOfJson):
+        """
+        Saves a response as a JSON to the directory.
+        :param responseJson: JSON which should be saved
+        :param nameOfJson: The name the JSON should get.
+        """
         with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson, f, ensure_ascii=False, indent=4)
 
     def getDocument(self, docID, query, dateTime=False):
+        """
+        Through a provided query document ID this function fetches the associated JSON and return the received file.
+        Namely: "createdByUser", "createdAt", "id", "name", "slug", "status".
+        :param docID: Id of the document
+        :param query: GraphQL query
+        :param dateTime: Relevant when fetching historical answers. Default is false (=not relevant).
+        :return: Received JSON file
+        """
         transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
-        # Provide a GraphQL query with th docID
+        # Provide a GraphQL query with the docID
         query = gql(query)
         params = {"id": docID}
+        # DateTime may be relevant when fetching the document again
         if dateTime:
             params['dateTime'] = self.dateTimeIso
         response = client.execute(query, variable_values=params)
@@ -503,6 +519,11 @@ fragment FieldAnswer on Answer {
 
     # only works if there are not more than one k, v pair wih the same key
     def getRelevantInfoFromJsonAllWorkingItems(self, json):
+        """
+        This function is designed to extract relevant information from the JSON with all the open forms.
+        :param json: Passing the JSON into the function.
+        :return: Return a dict with the extracted fields.
+        """
         final = {}
         if type(json) == dict:
             for k, v in json.items():
@@ -517,13 +538,18 @@ fragment FieldAnswer on Answer {
 
     # check if a relevant answer was altered
     def update(self):
+        """
+        This is the core function of the script. It fetches the "historical answers" of unfinished forms.
+        If something was deleted or altered it will be indicated with a "~", a "+" indicate that an new answer was given.
+        The Functions then updates the new or altered answers on the JSON. XXXXXXXXXXXXXXXXXXXXXX
+        """
         with open("BackUp.json", encoding='utf-8') as f:
             for node in json.load(f).items():
                 # check if the document is already frozen
                 if node[1]['status'] != 'RUNNING':
                     continue
                 returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
-                #check if something was changed with "~" and if the answer is relevant
+                # check if something was changed with "~" and if the answer is relevant
                 newanswers = []
                 for historicalAnswer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
                     question = historicalAnswer["node"]["question"]["slug"]
@@ -531,27 +557,31 @@ fragment FieldAnswer on Answer {
                         # something was altered or deleted
                         newanswers.append(question)
                     elif question in self.searchFilterMilkRelated and question not in node[1]['answer']:
-                        #check if a new relevant aswer was given
+                        # check if a new relevant aswer was given
                         newanswers.append(question)
                 # check if new answers were found
                 if newanswers:
                     print(self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers))
-
-
-
-
+                    print(node[1]['id'])
 
     # May need some rework
     def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
+        """
+        Extracts certain variables from a JSON containing the answers to a filled out from.
+        :param jsonname: Name of the (JSON) file that needs to be searched.
+        :param searchwords: The variables that are relevant and need to be extracted.
+        :return:
+        """
         if searchwords is None:
             searchwords = self.searchFilterMilkRelated
         final = {}
         if type(jsonname) == str:
             with open(jsonname, encoding='utf-8') as f:
                 loaded = json.load(f)
-        else:loaded = jsonname
+        else:
+            loaded = jsonname
 
-            # check all answer nodes
+        # check all answer nodes
         for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
             if node['node']['question']['slug'] in searchwords:
                 for k in node['node']:
