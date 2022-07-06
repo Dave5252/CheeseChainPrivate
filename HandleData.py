@@ -1,10 +1,8 @@
 import json, time
-import os
 from datetime import datetime
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests
-
 
 class HandleData:
     def __init__(self):
@@ -33,7 +31,7 @@ class HandleData:
         }
 
         self.data = {
-            'refresh_token': '598269a4d381404490081b6e69efe387',
+            'refresh_token': '03ce2cf276ff4f09bc9e913c7f1dc3fb',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -439,6 +437,7 @@ fragment FieldAnswer on Answer {
         self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
                                         "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
                                         "833-10-stuckzahl-produzierte-kase", "833-10-datum", "833-10-kultur"]
+        self.nameNewestBackupFile = "BackUp1657132756.8715763.json"
 
     def refreshToken(self):
         response = requests.post('https://beta.qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
@@ -498,7 +497,7 @@ fragment FieldAnswer on Answer {
 
     def getDocument(self, docID, query, dateTime=False):
         """
-        Through a provided query document ID this function fetches the associated JSON and return the received file.
+        Through a provided query and document ID this function fetches the associated JSON and return the received file.
         Namely: "createdByUser", "createdAt", "id", "name", "slug", "status".
         :param docID: Id of the document
         :param query: GraphQL query
@@ -518,7 +517,7 @@ fragment FieldAnswer on Answer {
         return response
 
     # only works if there are not more than one k, v pair wih the same key
-    def getRelevantInfoFromJsonAllWorkingItems(self, json):
+    def getRelevantInfoAllWorkingItems(self, json):
         """
         This function is designed to extract relevant information from the JSON with all the open forms.
         :param json: Passing the JSON into the function.
@@ -528,15 +527,16 @@ fragment FieldAnswer on Answer {
         if type(json) == dict:
             for k, v in json.items():
                 if type(v) == dict or type(v) == list:
-                    final = final | self.getRelevantInfoFromJsonAllWorkingItems(v)
+                    final = final | self.getRelevantInfoAllWorkingItems(v)
                 if k in self.searchFilterAllWorkingItems:
                     final[k] = v
         elif type(json) == list:
             for element in json:
-                final = final | self.getRelevantInfoFromJsonAllWorkingItems(element)
+                final = final | self.getRelevantInfoAllWorkingItems(element)
+        #set the lastUpdated variable = 0
+        final["lastUpdated"] = 0
         return final
 
-    # check if a relevant answer was altered
     def update(self):
         """
         This is the core function of the script. It fetches the "historical answers" of unfinished forms.
@@ -544,8 +544,10 @@ fragment FieldAnswer on Answer {
         The Functions then updates the new or altered answers on the JSON. XXXXXXXXXXXXXXXXXXXXXX
         """
 
-        with open("BackUp.json", encoding='utf-8') as f:
-            for node in json.load(f).items():
+        with open(self.nameNewestBackupFile, encoding='utf-8') as f:
+            data = json.load(f)
+            changes = 0
+            for node in data.items():
                 # check if the document is already frozen
                 if node[1]['status'] != 'RUNNING':
                     continue
@@ -554,23 +556,38 @@ fragment FieldAnswer on Answer {
                 newanswers = []
                 for historicalAnswer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
                     question = historicalAnswer["node"]["question"]["slug"]
-                    if historicalAnswer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated:
-                        # something was altered or deleted
+                    if historicalAnswer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated and node[1]["lastUpdated"] != historicalAnswer["node"]["historyDate"]:
+                        # something was altered or deleted and is new
                         newanswers.append(question)
+                        #update the lastUpdated time
+                        data[node[0]]["lastUpdated"] = historicalAnswer["node"]["historyDate"]
                     elif question in self.searchFilterMilkRelated and question not in node[1]['answer']:
-                        # check if a new relevant aswer was given
+                        # check if a new relevant answer was given
                         newanswers.append(question)
-                # check if new answers were found
+
                 if newanswers:
-                    print(self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers))
-                    print(node[1]['id'])
-                # TODO: sending new info to SC
+                    # check if the new answers are really new maybe the historical answer is the same. This makes sure no unnecessary transaction will me triggered.
+                    newFetchedAnswers = self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers)
+                    # TODO: Save the new fetched answerfile??? maybe false
+                    for question, newVal in newFetchedAnswers.items():
+                        if node[1]["answer"][question] != newVal:
+                            # the new value was really new
+                            changes+=1
+                            data[node[0]][question] = newVal
+
+
+        # update the new BackupJSON with the new time
+        if changes !=0:
+            with open("BackUp"+str(time.time())+".json", "w", encoding='utf-8') as f:
+                json.dump(data,f, indent=2)
+
+
 
     def checkForNewFiles(self):
         # TODO: Check if new files were added.
         pass
 
-    # May need some rework
+      # May need some rework
     def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
         """
         Extracts certain variables from a JSON containing the answers to a filled out from.
