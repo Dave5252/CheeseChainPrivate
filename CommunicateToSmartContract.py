@@ -1,10 +1,13 @@
 import hashlib
+import json
+import time
+
 from web3 import Web3
 
 
 class CommunicateToSmartContract:
     def __init__(self):
-        self.__mySCAdress = "0xb4D4816285903b4cd191d3Ae94cA91edb19F9Ba6"
+        self.__mySCAdress = "0xbBD63BdA3295c7a6c8e9853c46a18641C42ABE24"
         self.abi = """[
 	{
 		"inputs": [
@@ -308,18 +311,23 @@ class CommunicateToSmartContract:
 		"type": "function"
 	}
 ]"""
-        self.ScAddress = '0x8368e11ADB61a953a1B275cDCcAe7d308f35109d'
+        self.ScAddress = '0xEbC95662E3474F41D939F900A746c162010233Dc'
         self.w3 = Web3(Web3.HTTPProvider('HTTP://127.0.0.1:7545'))
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
     def createHash(self, jsontohash):
-        return hashlib.sha256(jsontohash).hexdigest()
+        #TODO somehow the hash online and the one created here is not the same
+        return hashlib.sha256(json.dumps(jsontohash).encode('utf8')).hexdigest()
 
-    def createNewFormSmartContract(self, ID):
-        self.contract_instance.functions.createForm(ID,'huso', 1312, "urmom", self.createHash("huse".encode('utf-8')),"urmom").transact({'from': self.__mySCAdress})
+    def createNewFormSmartContract(self, id, data):
+        self.contract_instance.functions.createForm(id, data["name"], 1391, data["id"]+str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
 
-    def uptateFormOnSmartContract(self, ID):
+    def uptateFormOnSmartContract(self, id, data):
+        self.contract_instance.functions.updateform(id, data["lastModifiedBy"],# additional answers may be given
+                                                        data["id"] + str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
+
+
+    def sendTopublicBC(self):
         pass
-
-
+        # TODO: implement the communication to the public BC
 

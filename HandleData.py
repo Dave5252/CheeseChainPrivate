@@ -31,14 +31,14 @@ class HandleData:
         }
 
         self.data = {
-            'refresh_token': '03ce2cf276ff4f09bc9e913c7f1dc3fb',
+            'refresh_token': '9f2ae9e03ecc448e9de3e828ffc0928b',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
         }
 
         self.authToken = "0"
-        self.dateTimeIso = datetime.now().isoformat()
+        self.lastChecked = 0
         self.getAnswerQuery = """
                   query DocumentAnswers($id: ID!) {
   allDocuments(filter: [{id: $id}]) {
@@ -433,6 +433,50 @@ fragment FieldAnswer on Answer {
 
 
 """
+        self.getAllWorkingItemsQuery = """ {allCases(orderBy: CREATED_AT_DESC, status: [RUNNING,COMPLETED]) {
+                     edges {
+                       node {
+                         createdAt
+                         createdByUser
+                        document{
+                          id
+                          form{
+                            name
+
+                          }
+                          
+                        }
+                        status
+                        
+                         }
+                        
+                         }
+                       }
+                     }
+                 """
+        self.getAllWorkingItemsAfterQuery = """query allWorkItemsAfter($dateTime: DateTime!){
+                   {allCases(orderBy: CREATED_AT_DESC, status: [RUNNING,COMPLETED], createdAfter: $dateTime) {
+                     edges {
+                       node {
+                         createdAt
+                         createdByUser
+                        document{
+                          id
+                          form{
+                            name
+
+                          }
+                          
+                        }
+                        status
+                        
+                         }
+                        
+                         }
+                       }
+                     }
+                   
+                 }"""
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
         self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
                                         "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
@@ -450,7 +494,7 @@ fragment FieldAnswer on Answer {
     def getAuthToekn(self):
         return self.authToken
 
-    def getAllWorkingItems(self):
+    def getAllWorkingItems(self, query, dateTime=None):
         """
         Returns a JSON with all the open forms and corresponding information (i.e. UserID of creator, creation date)
         :return: Returns the received JSON.
@@ -458,32 +502,14 @@ fragment FieldAnswer on Answer {
         transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
                                      headers={"authorization": "Bearer " + self.getAuthToekn()})
         client = Client(transport=transport)
-        # Provide a GraphQL query
-        query = gql(""" {
-           allWorkItems(orderBy: CREATED_AT_DESC) {
-             edges {
-               node {
-                 createdAt
-                 createdByUser
-                 task {
-                   slug
-                 }
-                 case {
-                  status
-                   document {
-                     id
-                     form {
-                       name
-                       
-                     }
-                   }
-                 }
-               }
-             }
-           }
-         }
-         """)
-        response = client.execute(query)
+        query = gql(query)
+        # Set the time to the time that was last checked
+        params = {"dateTime": self.lastChecked}
+        # Update the last checked tim to the current time
+        self.lastChecked = datetime.now().isoformat()
+        if dateTime:
+            response = client.execute(query,variable_values=params)
+        else:response = client.execute(query)
         return response
 
     def saveAsJson(self, responseJson, nameOfJson):
@@ -512,7 +538,7 @@ fragment FieldAnswer on Answer {
         params = {"id": docID}
         # DateTime may be relevant when fetching historical answers
         if dateTime:
-            params['dateTime'] = self.dateTimeIso
+            params['dateTime'] = datetime.now().isoformat()
         response = client.execute(query, variable_values=params)
         return response
 
@@ -535,6 +561,7 @@ fragment FieldAnswer on Answer {
                 final = final | self.getRelevantInfoAllWorkingItems(element)
         #set the lastUpdated variable = 0
         final["lastUpdated"] = 0
+        final["lastModifiedBy"] = ""
         return final
 
     def update(self):
@@ -542,11 +569,13 @@ fragment FieldAnswer on Answer {
         This is the core function of the script. It fetches the "historical answers" of unfinished forms.
         If something was deleted or altered it will be indicated with a "~", a "+" indicate that an new answer was given.
         The Functions then updates the new or altered answers on the JSON. XXXXXXXXXXXXXXXXXXXXXX
+        :return: The IDs of the Files that were altered/updated.
         """
-
+        idsofupdatedfiles = []
         with open(self.nameNewestBackupFile, encoding='utf-8') as f:
             data = json.load(f)
             changes = 0
+            # loop through all stored documents
             for node in data.items():
                 # check if the document is already frozen
                 if node[1]['status'] != 'RUNNING':
@@ -559,8 +588,10 @@ fragment FieldAnswer on Answer {
                     if historicalAnswer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated and node[1]["lastUpdated"] != historicalAnswer["node"]["historyDate"]:
                         # something was altered or deleted and is new
                         newanswers.append(question)
-                        #update the lastUpdated time
+                        # update the lastUpdated time
                         data[node[0]]["lastUpdated"] = historicalAnswer["node"]["historyDate"]
+                        # save the Username
+                        modifiedByWho = historicalAnswer["node"]["historyUserId"]
                     elif question in self.searchFilterMilkRelated and question not in node[1]['answer']:
                         # check if a new relevant answer was given
                         newanswers.append(question)
@@ -574,18 +605,26 @@ fragment FieldAnswer on Answer {
                             # the new value was really new
                             changes+=1
                             data[node[0]][question] = newVal
-
-
+                            data[node[0]]["lastModifiedBy"] = modifiedByWho
+                            idsofupdatedfiles.append(node[0])
         # update the new BackupJSON with the new time
         if changes !=0:
             with open("BackUp"+str(time.time())+".json", "w", encoding='utf-8') as f:
                 json.dump(data,f, indent=2)
+                print(changes, " files were updated")
+                return idsofupdatedfiles
+
 
 
 
     def checkForNewFiles(self):
-        # TODO: Check if new files were added.
-        pass
+        with open("AllWorkingItems.json", "r", encoding='utf-8') as f:
+            newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery)
+            # If there are no new entries the length of the JSON will be 65
+            if len(newitems) == 65:
+                return
+            else:pass
+
 
       # May need some rework
     def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
@@ -622,4 +661,4 @@ fragment FieldAnswer on Answer {
             except:
                 pass
 
-        return final # TODO. Sending info to SC
+        return final
