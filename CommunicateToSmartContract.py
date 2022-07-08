@@ -7,7 +7,7 @@ from web3 import Web3
 
 class CommunicateToSmartContract:
     def __init__(self):
-        self.__mySCAdress = "0xbBD63BdA3295c7a6c8e9853c46a18641C42ABE24"
+        self.__mySCAdress = "0x47FCd56199ac59cA2888Ae1d5B27d4be7492d0d9"
         self.abi = """[
 	{
 		"inputs": [
@@ -311,7 +311,7 @@ class CommunicateToSmartContract:
 		"type": "function"
 	}
 ]"""
-        self.ScAddress = '0xEbC95662E3474F41D939F900A746c162010233Dc'
+        self.ScAddress = '0x89d340a90B943D4946e34dca830F49abe72e8665'
         self.w3 = Web3(Web3.HTTPProvider('HTTP://127.0.0.1:7545'))
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
@@ -322,10 +322,14 @@ class CommunicateToSmartContract:
     def createNewFormSmartContract(self, id, data):
         self.contract_instance.functions.createForm(id, data["name"], 1391, data["id"]+str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
 
-    def uptateFormOnSmartContract(self, id, data):
-        self.contract_instance.functions.updateform(id, data["lastModifiedBy"],# additional answers may be given
-                                                        data["id"] + str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
+    def uptateFormOnSmartContract(self, id, BackUpFileName):
+        with open(BackUpFileName, 'r', encoding='utf-8') as f:
+            data = json.load(f) # Todo 1391 ersetzen mit  data[id]["lastmodified by"]
+        self.contract_instance.functions.updateForm(id, 1391,# additional answers may be given
+                                                        data[id]["id"] + str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
 
+    def freezeForm(self, id):
+        self.contract_instance.functions.freezeForm(id).transact({'from': self.__mySCAdress})
 
     def sendTopublicBC(self):
         pass

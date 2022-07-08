@@ -1,4 +1,5 @@
 import json, time
+import os
 from datetime import datetime
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -31,14 +32,14 @@ class HandleData:
         }
 
         self.data = {
-            'refresh_token': '9f2ae9e03ecc448e9de3e828ffc0928b',
+            'refresh_token': '02fe7a9bcbbb4bad99215d8f3501db0c',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
         }
 
         self.authToken = "0"
-        self.lastChecked = 0
+        self.lastChecked = '2022-07-08T17:46:19.944445' # when running first time needs to be changed
         self.getAnswerQuery = """
                   query DocumentAnswers($id: ID!) {
   allDocuments(filter: [{id: $id}]) {
@@ -455,7 +456,7 @@ fragment FieldAnswer on Answer {
                      }
                  """
         self.getAllWorkingItemsAfterQuery = """query allWorkItemsAfter($dateTime: DateTime!){
-                   {allCases(orderBy: CREATED_AT_DESC, status: [RUNNING,COMPLETED], createdAfter: $dateTime) {
+                   allCases(orderBy: CREATED_AT_DESC, status: [RUNNING,COMPLETED], createdAfter: $dateTime) {
                      edges {
                        node {
                          createdAt
@@ -474,14 +475,16 @@ fragment FieldAnswer on Answer {
                         
                          }
                        }
-                     }
+}
                    
-                 }"""
+                  
+                   
+                 """
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
         self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
                                         "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
                                         "833-10-stuckzahl-produzierte-kase", "833-10-datum", "833-10-kultur"]
-        self.nameNewestBackupFile = "BackUp1657132756.8715763.json"
+        self.nameNewestBackupFile = ""
 
     def refreshToken(self):
         response = requests.post('https://beta.qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
@@ -505,8 +508,6 @@ fragment FieldAnswer on Answer {
         query = gql(query)
         # Set the time to the time that was last checked
         params = {"dateTime": self.lastChecked}
-        # Update the last checked tim to the current time
-        self.lastChecked = datetime.now().isoformat()
         if dateTime:
             response = client.execute(query,variable_values=params)
         else:response = client.execute(query)
@@ -572,6 +573,7 @@ fragment FieldAnswer on Answer {
         :return: The IDs of the Files that were altered/updated.
         """
         idsofupdatedfiles = []
+        idsToFreeze = []
         with open(self.nameNewestBackupFile, encoding='utf-8') as f:
             data = json.load(f)
             changes = 0
@@ -579,6 +581,7 @@ fragment FieldAnswer on Answer {
             for node in data.items():
                 # check if the document is already frozen
                 if node[1]['status'] != 'RUNNING':
+                    idsToFreeze.append(node[0])
                     continue
                 returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
                 # check if something was changed with "~" and if the answer is relevant
@@ -601,32 +604,98 @@ fragment FieldAnswer on Answer {
                     newFetchedAnswers = self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers)
                     # TODO: Save the new fetched answerfile??? maybe false
                     for question, newVal in newFetchedAnswers.items():
-                        if node[1]["answer"][question] != newVal:
-                            # the new value was really new
-                            changes+=1
-                            data[node[0]][question] = newVal
-                            data[node[0]]["lastModifiedBy"] = modifiedByWho
-                            idsofupdatedfiles.append(node[0])
+                        if node[1]["answer"][question]:
+                            if node[1]["answer"][question] != newVal:
+                                # the new value was really new
+                                data[node[0]]["lastModifiedBy"] = modifiedByWho
+                                if node[0] not in idsofupdatedfiles:
+                                    idsofupdatedfiles.append(node[0])
+                                changes += 1
+                        else:data[node[0]]["answer"][question] = newVal
+                        # make sure it will not be added twice to the list
+
+
         # update the new BackupJSON with the new time
         if changes !=0:
-            with open("BackUp"+str(time.time())+".json", "w", encoding='utf-8') as f:
+            # Update nameNewestBackupFile variable
+            print(changes," were made")
+            newName = "BackUp"+str(time.time())+".json"
+            self.nameNewestBackupFile = newName
+            with open(newName, "w", encoding='utf-8') as f:
                 json.dump(data,f, indent=2)
                 print(changes, " files were updated")
-                return idsofupdatedfiles
+        return idsofupdatedfiles, idsToFreeze
 
 
 
 
     def checkForNewFiles(self):
         with open("AllWorkingItems.json", "r", encoding='utf-8') as f:
-            newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery)
-            # If there are no new entries the length of the JSON will be 65
-            if len(newitems) == 65:
-                return
-            else:pass
+            newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
+            # Update the last checked tim to the current time
+            self.lastChecked = datetime.now().isoformat()
+            test = self.helperFunctionForExtracionAndSaving(newitems)
+            if test:
+                self.writeOnCurrentBackUpFile(test)
+                print("new item", test)
+            else:return
 
 
-      # May need some rework
+    def helperFunctionForExtracionAndSaving(self, allWorkItemsJson):
+        final = {}
+        currStringTime = str(time.time())
+        for node in allWorkItemsJson["allCases"]["edges"]:
+            nested = {}
+            relevantData = self.getRelevantInfoAllWorkingItems(node)
+            # sort by ID
+            IDofCurrentNode = node["node"]["document"]["id"]
+            os.chdir(r"C:\Users\David\Desktop\BA Code\Answers")
+            self.saveAsJson(self.getDocument(IDofCurrentNode, self.getAnswerQuery),
+                            "Answer_" + IDofCurrentNode + currStringTime)
+            relevantData["answer"] = self.getRelevantInfoFromJsonAnswers(
+                "Answer_" + IDofCurrentNode + currStringTime + ".json")
+            nested[relevantData["id"]] = relevantData
+            final.update(nested)
+        os.chdir(r"C:\Users\David\Desktop\BA Code")
+        return final
+
+    def freezeForm(self, ids):
+        if not ids:
+            return
+        with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
+            data = json.load(f)
+            #check if the file already exists
+            if os.path.exists(r"C:\Users\David\Desktop\BA Code\FrozenIDs.json"):
+                frozen = open("FrozenIDs.json", "r+", encoding='utf-8')
+                alredyFrozen = json.load(frozen)
+            else:
+                frozen = open("FrozenIDs.json", "w", encoding='utf-8')
+                alredyFrozen = {}
+            for id in ids:
+                popped = data.pop(id)
+                alredyFrozen[popped["id"]] = popped
+
+                    # TOdo send to public BC & freeze form on local bc
+            json.dump(alredyFrozen,frozen, indent=2)
+            frozen.close()
+            print("new frozenIDs file: ", alredyFrozen)
+            print("new backup file without any frozenfiles file: ", data)
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+
+
+
+
+
+    def writeOnCurrentBackUpFile(self, fileToAppend):
+        with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
+            currData = json.loads(f.read())
+            currData.update(fileToAppend)
+            json.dump(currData, f, indent=2)
+
+
+    # May need some rework
     def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
         """
         Extracts certain variables from a JSON containing the answers to a filled out from.

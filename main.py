@@ -14,12 +14,23 @@ def main():
     d.saveAsJson(d.getAllWorkingItems(d.getAllWorkingItemsQuery), "AllWorkingItems")
     firstTimeRun()
     while True:
-        updatedids = d.update()
-        if updatedids != []:
-            for ids in updatedids:
-                pass
+        d.refreshToken()
+        refetchingFreezingAndUpdating()
+        time.sleep(25)
+        d.checkForNewFiles()
+        time.sleep(200)
 
-        time.sleep(250)
+def refetchingFreezingAndUpdating():
+    updatedids, idstofreeze = d.update()
+    if updatedids:
+        print("to update: ",updatedids)
+        for id in updatedids:
+            c.uptateFormOnSmartContract(id, d.nameNewestBackupFile)
+    else: print("nothing to update")
+    if idstofreeze:
+        d.freezeForm(idstofreeze)
+        [c.freezeForm(id) for id in idstofreeze]
+
 
 def firstTimeRun():
 
@@ -29,22 +40,8 @@ def firstTimeRun():
         # save the relevant data inside a nested json called BackUp
         d.nameNewestBackupFile = backUpFileName
         with open(backUpFileName, 'w', encoding='utf-8') as jsonFile:
-            final = {}
-            currStringTime = str(time.time())
-            for node in loaded["allCases"]["edges"]:
-                nested = {}
-                relevantData = d.getRelevantInfoAllWorkingItems(node)
-                # sort by ID
-                IDofCurrentNode = node["node"]["document"]["id"]
-                os.chdir(r"C:\Users\David\Desktop\BA Code\Anwers")
-                d.saveAsJson(d.getDocument(IDofCurrentNode, d.getAnswerQuery),
-                             "Answer_" + IDofCurrentNode + currStringTime)
-                relevantData["answer"] = d.getRelevantInfoFromJsonAnswers(
-                    "Answer_" + IDofCurrentNode + currStringTime + ".json")
-                nested[relevantData["id"]] = relevantData
-                final.update(nested)
+            final = d.helperFunctionForExtracionAndSaving(loaded)
             json.dump(final, jsonFile, indent=2)
-            os.chdir(r"C:\Users\David\Desktop\BA Code")
             print("ran for the fist time")
             # send the created BackUp JSON to the local BC
             for id, val in final.items():
