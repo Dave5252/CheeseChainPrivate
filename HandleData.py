@@ -1,4 +1,5 @@
 import json, time
+import logging
 import os
 from datetime import datetime
 from gql import Client, gql
@@ -32,14 +33,14 @@ class HandleData:
         }
 
         self.data = {
-            'refresh_token': '02fe7a9bcbbb4bad99215d8f3501db0c',
+            'refresh_token': 'c778913ca5564a7db71abab07e2af121',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
         }
 
         self.authToken = "0"
-        self.lastChecked = '2022-07-08T17:46:19.944445' # when running first time needs to be changed
+        self.lastChecked = '2022-07-11T11:46:19.944445' # when running first time needs to be changed
         self.getAnswerQuery = """
                   query DocumentAnswers($id: ID!) {
   allDocuments(filter: [{id: $id}]) {
@@ -430,6 +431,15 @@ fragment FieldAnswer on Answer {
       }
     }
   }
+  allDocuments(id:$id){
+    edges{
+      node{
+       case{
+        status
+      }
+      }
+    }
+  }
 }
 
 
@@ -443,14 +453,11 @@ fragment FieldAnswer on Answer {
                           id
                           form{
                             name
-
                           }
-                          
                         }
                         status
                         
                          }
-                        
                          }
                        }
                      }
@@ -522,7 +529,7 @@ fragment FieldAnswer on Answer {
         with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson, f, ensure_ascii=False, indent=4)
 
-    def getDocument(self, docID, query, dateTime=False):
+    def getDocument(self, docID, query, dateTime=None):
         """
         Through a provided query and document ID this function fetches the associated JSON and return the received file.
         Namely: "createdByUser", "createdAt", "id", "name", "slug", "status".
@@ -579,11 +586,16 @@ fragment FieldAnswer on Answer {
             changes = 0
             # loop through all stored documents
             for node in data.items():
-                # check if the document is already frozen
+                # check if the document is already frozen after first fetching
                 if node[1]['status'] != 'RUNNING':
                     idsToFreeze.append(node[0])
                     continue
                 returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
+                # chek if it got frozen in the meantime
+                if returnedJson['allDocuments']["edges"][0]["node"]["case"]["status"] != 'RUNNING':
+                    idsToFreeze.append(node[0])
+                    print(node[0], "Will be frozen")
+                    continue
                 # check if something was changed with "~" and if the answer is relevant
                 newanswers = []
                 for historicalAnswer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
@@ -604,15 +616,22 @@ fragment FieldAnswer on Answer {
                     newFetchedAnswers = self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers)
                     # TODO: Save the new fetched answerfile??? maybe false
                     for question, newVal in newFetchedAnswers.items():
-                        if node[1]["answer"][question]:
-                            if node[1]["answer"][question] != newVal:
-                                # the new value was really new
-                                data[node[0]]["lastModifiedBy"] = modifiedByWho
-                                if node[0] not in idsofupdatedfiles:
-                                    idsofupdatedfiles.append(node[0])
+                        try:
+                            if node[1]["answer"][question]:
+                                if node[1]["answer"][question] != newVal:
+                                    # the new value was really new
+                                    data[node[0]]["lastModifiedBy"] = modifiedByWho
+                                    data[node[0]]["answer"][question] = newVal
+                                    changes += 1
+                                    if node[0] not in idsofupdatedfiles:
+                                        idsofupdatedfiles.append(node[0])
+                            else:
+                                data[node[0]]["answer"][question] = newVal
                                 changes += 1
-                        else:data[node[0]]["answer"][question] = newVal
-                        # make sure it will not be added twice to the list
+                        except:
+                            logging.info(question, " was not found")
+
+                    # make sure it will not be added twice to the list
 
 
         # update the new BackupJSON with the new time
@@ -630,15 +649,16 @@ fragment FieldAnswer on Answer {
 
 
     def checkForNewFiles(self):
-        with open("AllWorkingItems.json", "r", encoding='utf-8') as f:
-            newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
-            # Update the last checked tim to the current time
-            self.lastChecked = datetime.now().isoformat()
-            test = self.helperFunctionForExtracionAndSaving(newitems)
-            if test:
-                self.writeOnCurrentBackUpFile(test)
-                print("new item", test)
-            else:return
+
+        newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
+        # Update the last checked time to the current UCT time, as the server runs on UCT time.
+        # TODO this work?
+        self.lastChecked = datetime.now().utcnow().isoformat()
+        test = self.helperFunctionForExtracionAndSaving(newitems)
+        if test:
+            self.writeOnCurrentBackUpFile(test)
+            print("new item", test)
+        else:return
 
 
     def helperFunctionForExtracionAndSaving(self, allWorkItemsJson):
@@ -674,9 +694,12 @@ fragment FieldAnswer on Answer {
             for id in ids:
                 popped = data.pop(id)
                 alredyFrozen[popped["id"]] = popped
+                alredyFrozen[popped["id"]]["status"] = "COMPLETED"
 
-                    # TOdo send to public BC & freeze form on local bc
+            # TOdo send to public BC & freeze form on local bc
+            frozen.seek(0)
             json.dump(alredyFrozen,frozen, indent=2)
+            frozen.truncate()
             frozen.close()
             print("new frozenIDs file: ", alredyFrozen)
             print("new backup file without any frozenfiles file: ", data)
@@ -692,7 +715,9 @@ fragment FieldAnswer on Answer {
         with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
             currData = json.loads(f.read())
             currData.update(fileToAppend)
+            f.seek(0)
             json.dump(currData, f, indent=2)
+            f.truncate()
 
 
     # May need some rework

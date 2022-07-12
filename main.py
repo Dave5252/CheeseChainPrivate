@@ -18,8 +18,8 @@ def main():
         refetchingFreezingAndUpdating()
         time.sleep(25)
         d.checkForNewFiles()
-        time.sleep(200)
-
+        #time.sleep(200)
+        time.sleep(20)
 def refetchingFreezingAndUpdating():
     updatedids, idstofreeze = d.update()
     if updatedids:

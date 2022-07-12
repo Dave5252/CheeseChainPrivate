@@ -7,7 +7,7 @@ from web3 import Web3
 
 class CommunicateToSmartContract:
     def __init__(self):
-        self.__mySCAdress = "0x47FCd56199ac59cA2888Ae1d5B27d4be7492d0d9"
+        self.__mySCAdress = "0x97d2b9dc20Ab4fcb08b5fef882E1ffDA08567c10"
         self.abi = """[
 	{
 		"inputs": [
@@ -311,7 +311,7 @@ class CommunicateToSmartContract:
 		"type": "function"
 	}
 ]"""
-        self.ScAddress = '0x89d340a90B943D4946e34dca830F49abe72e8665'
+        self.ScAddress = '0xb5aa162A774E5BA2722Fa7f0466130FbE13725CF'
         self.w3 = Web3(Web3.HTTPProvider('HTTP://127.0.0.1:7545'))
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
