@@ -17,7 +17,8 @@ def main():
         d.refreshToken()
         refetchingFreezingAndUpdating()
         time.sleep(25)
-        d.checkForNewFiles()
+        newFiles = d.checkForNewFiles()
+        creteNewFormOnSC(newFiles)
         #time.sleep(200)
         time.sleep(20)
 def refetchingFreezingAndUpdating():
@@ -31,11 +32,15 @@ def refetchingFreezingAndUpdating():
         d.freezeForm(idstofreeze)
         [c.freezeForm(id) for id in idstofreeze]
 
+def creteNewFormOnSC(newFiles):
+    if newFiles:
+        for id, newfile in newFiles.items():
+            c.createNewFormSmartContract(id, newfile)
 
 def firstTimeRun():
 
     backUpFileName = 'BackUp' + str(time.time()) + ".json"
-    with open(r'C:\Users\David\Desktop\BA Code\AllWorkingItems.json', encoding='utf-8') as f:
+    with open(r'AllWorkingItems.json', encoding='utf-8') as f:
         loaded = json.load(f)
         # save the relevant data inside a nested json called BackUp
         d.nameNewestBackupFile = backUpFileName

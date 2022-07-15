@@ -7,8 +7,21 @@ from web3 import Web3
 
 class CommunicateToSmartContract:
     def __init__(self):
-        self.__mySCAdress = "0x97d2b9dc20Ab4fcb08b5fef882E1ffDA08567c10"
+        self.__mySCAdress = "0xc0b06b29775B7d3f8cD3d427CFCCF2391BC700B4"
         self.abi = """[
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "_formID",
+				"type": "string"
+			}
+		],
+		"name": "FormFrozen",
+		"type": "event"
+	},
 	{
 		"inputs": [
 			{
@@ -84,24 +97,6 @@ class CommunicateToSmartContract:
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "string",
-				"name": "_formID",
-				"type": "string"
-			}
-		],
-		"name": "FormFrozen",
-		"type": "event"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "string",
@@ -133,6 +128,11 @@ class CommunicateToSmartContract:
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
 	},
 	{
 		"inputs": [],
@@ -240,8 +240,13 @@ class CommunicateToSmartContract:
 				"type": "string"
 			},
 			{
+				"internalType": "uint256",
+				"name": "changeCount",
+				"type": "uint256"
+			},
+			{
 				"internalType": "string",
-				"name": "previousFileName",
+				"name": "previousFileNames",
 				"type": "string"
 			}
 		],
@@ -262,6 +267,44 @@ class CommunicateToSmartContract:
 				"internalType": "string",
 				"name": "",
 				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_id",
+				"type": "string"
+			}
+		],
+		"name": "getUpdate",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_id",
+				"type": "string"
+			}
+		],
+		"name": "getUpdateCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -311,7 +354,7 @@ class CommunicateToSmartContract:
 		"type": "function"
 	}
 ]"""
-        self.ScAddress = '0xb5aa162A774E5BA2722Fa7f0466130FbE13725CF'
+        self.ScAddress = '0x335058be34b8EB7DBBFd8a4dEBD47544E91FbCa7'
         self.w3 = Web3(Web3.HTTPProvider('HTTP://127.0.0.1:7545'))
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
