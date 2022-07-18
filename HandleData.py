@@ -32,7 +32,7 @@ class HandleData:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
         }
         self.data = {
-            'refresh_token': '18f45d2416094980ab07ccf69e5363c2',
+            'refresh_token': 'c13e090290624b4db161448caec9e295',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -554,7 +554,13 @@ fragment FieldAnswer on Answer {
         # DateTime may be relevant when fetching historical answers
         if dateTime:
             params['dateTime'] = datetime.now().isoformat()
-        response = client.execute(query, variable_values=params)
+        gotConnection = False
+        while gotConnection == False:
+            try:
+                response = client.execute(query, variable_values=params)
+                gotConnection = True
+            except requests.exceptions.ConnectionError:
+                response.status_code = "Connection refused"
         return response
 
     # only works if there are not more than one k, v pair wih the same key
@@ -626,14 +632,7 @@ fragment FieldAnswer on Answer {
                     for question, newVal in newFetchedAnswers.items():
                         try:
                             if node[1]["answer"][question] or node[1]["answer"][question] == None:
-                                if node[1]["id"] == "RG9jdW1lbnQ6NGZjOTJmODQtM2NlZi00MzU0LWJhNjEtNWFkMzEwYjc2OGY1":
-                                    print("newVal: ",newVal, "question: ", question,"curr answer: ", node[1]["answer"][question])
-                                    print(newFetchedAnswers)
                                 if node[1]["answer"][question] != newVal:
-                                    if node[1]["id"] == "RG9jdW1lbnQ6NGZjOTJmODQtM2NlZi00MzU0LWJhNjEtNWFkMzEwYjc2OGY1":
-                                        print("newVal: ", newVal, "question: ", question, "curr answer: ",
-                                              node[1]["answer"][question])
-                                        print(newFetchedAnswers)
                                     # the new value was really new
                                     data[node[0]]["lastModifiedBy"] = modifiedByWho
                                     data[node[0]]["answer"][question] = newVal
@@ -675,42 +674,57 @@ fragment FieldAnswer on Answer {
 
 
     def mostRecentFileByID(self, id):
+        """
+        Gets the most recent file by ID.
+        :param id: A ID of a file.
+        :return: Return the newest file.
+        """
         return max([int(x[x.index("-")+1:x.index(".json")+1]) for x in os.listdir("BackupFiles") if x.startswith(id)])
 
 
     def checkForNewFiles(self):
         """
-        Fetches all the working itmes again and checks if they are new, if yes it appends to the current BackUp file
-        :return:
+        Fetches all the working items again and checks if they are new, if yes it appends to the current BackUp file
+        :return: Returns the new forms.
         """
         newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
         # Update the last checked time to the current UCT time, as the server runs on UCT time.
         self.lastChecked = datetime.now().utcnow().isoformat()
-        test = self.helperFunctionForExtracionAndSaving(newitems)
-        if test:
-            self.writeOnCurrentBackUpFile(test)
-            print("new item", test)
-            return test
+        newforms = self.helperFunctionForExtracionAndSaving(newitems)
+        if newforms:
+            self.writeOnCurrentBackUpFile(newforms)
+            print("new item", newforms)
+            return newforms
         else:return
 
 
     def helperFunctionForExtracionAndSaving(self, allWorkItemsJson):
+        """
+        Helps extracting and organizing relevant info from all the forms from the digitalQM. Fetches the corresponding
+        answer JSON from each form.
+        :return: Returns the BackUp file with all nodes and all its relevant variables.
+        """
         final = {}
         currStringTime = str(time.time())
+        # Loop trough the file with all the forms.
         for node in allWorkItemsJson["allCases"]["edges"]:
             nested = {}
+            # Feed each node into getRelevantInfoAllWorkingItems, to extract the relevant information.
             relevantData = self.getRelevantInfoAllWorkingItems(node)
-            # sort by ID
             IDofCurrentNode = node["node"]["document"]["id"]
             os.chdir("Answers")
+            # Save the new fetched answer file from the forms inside the Answers directory.
             self.saveAsJson(self.getDocument(IDofCurrentNode, self.getAnswerQuery),
                             "Answer_" + IDofCurrentNode + currStringTime)
+            # Call getRelevantInfoFromJsonAnswers to extract all the relevant variables from the new
+            # fetched answer file.
             relevantData["answer"] = self.getRelevantInfoFromJsonAnswers(
                 "Answer_" + IDofCurrentNode + currStringTime + ".json")
             nested[relevantData["id"]] = relevantData
             final.update(nested)
             os.chdir("..")
             os.chdir("BackupFiles")
+            # Save the new organized JSON with the extracted variables also to the BackupFiles folder.
             if nested:
                 self.saveAsJson(nested,(relevantData["id"] + r"-" + str(time.time())))
             os.chdir("..")
@@ -723,29 +737,32 @@ fragment FieldAnswer on Answer {
         :return Returns nothing, but if we have an empty list the function does not need to run, or empty files
         may be created.
         """
+        # May be called with an empty list.
         if not ids:
             return
         with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
             data = json.load(f)
-            #check if the file already exists
+            # check if the file where all the frozen files are saved already exists.
             if os.path.exists(r"FrozenIDs.json"):
                 frozen = open("FrozenIDs.json", "r+", encoding='utf-8')
                 alredyFrozen = json.load(frozen)
             else:
                 frozen = open("FrozenIDs.json", "w", encoding='utf-8')
                 alredyFrozen = {}
+            # Iterate through the ids of the files which need to be frozen.
             for id in ids:
+                # create the same data structure as in the BackUp file, and add to the alreadyFrozen file.
                 popped = data.pop(id)
                 alredyFrozen[popped["id"]] = popped
                 alredyFrozen[popped["id"]]["status"] = "COMPLETED"
-
-            # TOdo send to public BC & freeze form on local bc
+            # Overwrite the old file with the new appended JSON file
             frozen.seek(0)
             json.dump(alredyFrozen,frozen, indent=2)
             frozen.truncate()
             frozen.close()
             print("new frozenIDs file: ", alredyFrozen)
             print("new backup file without any frozenfiles file: ", data)
+            # Save the BackUp file with the RUNNING files, as all COMPLETED ones were frozen.
             f.seek(0)
             json.dump(data, f, indent=2)
             f.truncate()
@@ -760,6 +777,7 @@ fragment FieldAnswer on Answer {
         """
         with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
             currData = json.loads(f.read())
+            # Appends to the current file and overwrites the outdated data
             currData.update(fileToAppend)
             f.seek(0)
             json.dump(currData, f, indent=2)
@@ -774,23 +792,25 @@ fragment FieldAnswer on Answer {
         :param searchwords: The variables that are relevant and need to be extracted.
         :return:
         """
+        # take the predefined searchwords, if the variable is not defined.
         if searchwords is None:
             searchwords = self.searchFilterMilkRelated
         final = {}
+        # check if a name of a file is given, or a whole file is passed in the function
         if type(jsonname) == str:
             with open(jsonname, encoding='utf-8') as f:
                 loaded = json.load(f)
         else:
             loaded = jsonname
 
-        # check all answer nodes
+        # check all answer nodes for relevant variables
         for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
             if node['node']['question']['slug'] in searchwords:
                 for k in node['node']:
                     if "Value" in k:
                         final[node['node']["question"]["slug"]] = node['node'][k]
 
-            # check all the tables
+            # check all the tables, if there is no table, the first if statement will throw an exception.
             try:
                 if node['node']['tableValue']:
                     for awnserNode in node['node']["tableValue"][0]["answers"]["edges"]:
