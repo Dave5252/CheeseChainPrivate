@@ -1,10 +1,11 @@
 import json, time
-import logging
+import dateutil.parser
 import os
 from datetime import datetime
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests
+
 
 class HandleData:
     def __init__(self):
@@ -32,7 +33,7 @@ class HandleData:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
         }
         self.data = {
-            'refresh_token': 'c13e090290624b4db161448caec9e295',
+            'refresh_token': '7a1d967f2e0843918d6ffa3f091eae46',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -494,23 +495,23 @@ fragment FieldAnswer on Answer {
 
     def refreshToken(self):
         """
-
+        Sends a request to the GQL endpoint of fromarte to refresh the authorization and refresh token.
         """
-        gotNewtoken = False
-        while gotNewtoken == False:
+        gotnewtoken = False
+        tries = 0
+        # If the request gets denied or it is delayed, try it again (max 5 times).
+        while gotnewtoken == False or tries == 5:
             try:
                 response = requests.post('https://beta.qs.fromarte.ch/openid/token', headers=self.headers, cookies=self.cookies,
                                      data=self.data)
-                gotNewtoken = True
+                gotnewtoken = True
             except requests.exceptions.ConnectionError:
                 response.status_code = "Connection refused"
-        time.sleep(2)
+                tries += 1
         response_data = response.json()
         self.authToken = response_data["access_token"]
         self.data['refresh_token'] = response_data["refresh_token"]
 
-    def getAuthToekn(self):
-        return self.authToken
 
     def getAllWorkingItems(self, query, dateTime=None):
         """
@@ -518,11 +519,12 @@ fragment FieldAnswer on Answer {
         :return: Returns the received JSON.
         """
         transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
-                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
+                                     headers={"authorization": "Bearer " + self.authToken})
         client = Client(transport=transport)
         query = gql(query)
         # Set the time to the time that was last checked
         params = {"dateTime": self.lastChecked}
+        # If the dateTime is needed (when checking for new forms), execute with the params.
         if dateTime:
             response = client.execute(query,variable_values=params)
         else:response = client.execute(query)
@@ -537,30 +539,32 @@ fragment FieldAnswer on Answer {
         with open(nameOfJson + '.json', 'w', encoding='utf-8') as f:
             json.dump(responseJson, f, ensure_ascii=False, indent=4)
 
-    def getDocument(self, docID, query, dateTime=None):
+    def getDocument(self, document_id, query, date_time=None):
         """
         Through a provided query and document ID this function fetches the associated JSON and returns the received file.
-        :param docID: Id of the document
+        :param document_id: Id of the document
         :param query: GraphQL query
-        :param dateTime: Relevant when fetching historical answers. Default is false (=not relevant).
+        :param date_time: Relevant when fetching historical answers. Default is false (=not relevant).
         :return: Received JSON file
         """
         transport = AIOHTTPTransport(url="https://beta.qs.fromarte.ch/graphql/",
-                                     headers={"authorization": "Bearer " + self.getAuthToekn()})
+                                     headers={"authorization": "Bearer " + self.authToken})
         client = Client(transport=transport)
         # Provide a GraphQL query with the docID
         query = gql(query)
-        params = {"id": docID}
+        params = {"id": document_id}
         # DateTime may be relevant when fetching historical answers
-        if dateTime:
+        if date_time:
             params['dateTime'] = datetime.now().isoformat()
-        gotConnection = False
-        while gotConnection == False:
+        got_connection = False
+        tries = 0
+        while got_connection == False or tries == 5:
             try:
                 response = client.execute(query, variable_values=params)
-                gotConnection = True
+                got_connection = True
             except requests.exceptions.ConnectionError:
                 response.status_code = "Connection refused"
+                tries += 1
         return response
 
     # only works if there are not more than one k, v pair wih the same key
@@ -571,64 +575,76 @@ fragment FieldAnswer on Answer {
         :return: Return a dict with the extracted fields.
         """
         final = {}
+        # Check if it is dict or a list
         if type(json) == dict:
             for k, v in json.items():
                 if type(v) == dict or type(v) == list:
+                    # If the value is still a dict or a list, call itself again (recursion).
                     final = final | self.getRelevantInfoAllWorkingItems(v)
+                # append the key value pair, if they are of relevance.
                 if k in self.searchFilterAllWorkingItems:
                     final[k] = v
+
         elif type(json) == list:
             for element in json:
                 final = final | self.getRelevantInfoAllWorkingItems(element)
-        #set the lastUpdated variable = 0
+        # set the lastUpdated variable = 0 and lastModifiedBy to an empty string
         final["lastUpdated"] = 0
         final["lastModifiedBy"] = ""
         return final
 
-    def update(self):
+    def updateFiles(self):
         """
         This is the core function of the script. It fetches the "historical answers" of unfinished forms.
         If something was deleted or altered it will be indicated with a "~", a "+" indicate that an new answer was given.
         The Functions then updates the new or altered answers on the JSON. XXXXXXXXXXXXXXXXXXXXXX
         :return: The IDs of the Files that were altered/updated.
         """
-        idsofupdatedfiles = []
-        idsToFreeze = []
+        ids_of_updated_files = []
+        ids_to_freeze = []
         with open(self.nameNewestBackupFile, encoding='utf-8') as f:
             data = json.load(f)
             # used to see if a new file needs to be saved to BackUpFile
-            totalChanges = 0
+            total_changes = 0
             # loop through all stored documents
             for node in data.items():
-                changesToCurFile = 0
+                changes_to_current_file = 0
+                # Initiate a random date.
+                newest_history_date = "2000-07-19T19:27:19.121610"
                 # check if the document is already frozen after first fetching
                 if node[1]['status'] != 'RUNNING':
-                    idsToFreeze.append(node[0])
+                    ids_to_freeze.append(node[0])
                     continue
-                returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, dateTime=True)
+                returnedJson = self.getDocument(node[0], self.getHistAnswerQuery, date_time=True)
                 # chek if it got frozen in the meantime
                 if returnedJson['allDocuments']["edges"][0]["node"]["case"]["status"] != 'RUNNING':
-                    idsToFreeze.append(node[0])
+                    ids_to_freeze.append(node[0])
                     print(node[0], "Will be frozen")
                     continue
                 # check if something was changed with "~" and if the answer is relevant
-                newanswers = []
-                for historicalAnswer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
-                    question = historicalAnswer["node"]["question"]["slug"]
-                    if historicalAnswer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated and node[1]["lastUpdated"] != historicalAnswer["node"]["historyDate"]:
+                new_answers = []
+                for historical_answer in returnedJson["documentAsOf"]["historicalAnswers"]['edges']:
+                    question = historical_answer["node"]["question"]["slug"]
+                    hist_date = historical_answer["node"]["historyDate"]
+                    if historical_answer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated and node[1]["lastUpdated"] != hist_date[:(hist_date.index("+"))]:
                         # something was altered or deleted and is new
-                        newanswers.append(question)
+                        new_answers.append(question)
+                        if dateutil.parser.parse(newest_history_date) < dateutil.parser.parse(hist_date[:(hist_date.index("+"))]):
+                            newest_history_date = hist_date[:(hist_date.index("+"))]
                         # save the Username
-                        modifiedByWho = historicalAnswer["node"]["historyUserId"]
+                        modifiedByWho = historical_answer["node"]["historyUserId"]
                     elif question in self.searchFilterMilkRelated and question not in node[1]['answer']:
                         # check if a new relevant answer was given
-                        newanswers.append(question)
+                        new_answers.append(question)
+                        if dateutil.parser.parse(newest_history_date) < dateutil.parser.parse(
+                                hist_date[:(hist_date.index("+"))]):
+                            newest_history_date = hist_date[:(hist_date.index("+"))]
                     # "Kultur" related variables need to be handled differently, 833-10-kultur-lotnummer and 833-10-kultur variables need to be appended m.anually
-                    if historicalAnswer["node"]["question"]["label"] == "Kulturen" and node[1]["lastUpdated"] != historicalAnswer["node"]["historyDate"]:
-                        newanswers.extend(["833-10-kultur", "833-10-kultur-lotnummer"])
-                if newanswers:
+                    if historical_answer["node"]["question"]["label"] == "Kulturen" and node[1]["lastUpdated"] != historical_answer["node"]["historyDate"]:
+                        new_answers.extend(["833-10-kultur", "833-10-kultur-lotnummer"])
+                if new_answers:
                     # check if the new answers are really new maybe the historical answer is the same. This makes sure no unnecessary transaction will me triggered.
-                    newFetchedAnswers = self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), newanswers)
+                    newFetchedAnswers = {key:val for key, val in self.getRelevantInfoFromJsonAnswers(self.getDocument(node[0], self.getAnswerQuery), new_answers).items() if val != "tbt"}
                     for question, newVal in newFetchedAnswers.items():
                         try:
                             if node[1]["answer"][question] or node[1]["answer"][question] == None:
@@ -637,40 +653,47 @@ fragment FieldAnswer on Answer {
                                     data[node[0]]["lastModifiedBy"] = modifiedByWho
                                     data[node[0]]["answer"][question] = newVal
                                     # update the lastUpdated time
-                                    data[node[0]]["lastUpdated"] = historicalAnswer["node"]["historyDate"]
-                                    totalChanges += 1
-                                    changesToCurFile += 1
-                                    if node[0] not in idsofupdatedfiles:
-                                        idsofupdatedfiles.append(node[0])
-                            # a past given answer was deleted
-                            if question not in newFetchedAnswers.keys():
-                                node[1]["answer"][question] = None
+                                    data[node[0]]["lastUpdated"] = newest_history_date
+                                    total_changes += 1
+                                    changes_to_current_file += 1
+                                    if node[0] not in ids_of_updated_files:
+                                        ids_of_updated_files.append(node[0])
                         except:
                             # Catch if it does not exist
                             data[node[0]]["answer"][question] = newVal
-                            totalChanges += 1
-                            data[node[0]]["lastUpdated"] = historicalAnswer["node"]["historyDate"]
-                            changesToCurFile += 1
-                            if question not in newFetchedAnswers.keys():
-                                node[1]["answer"][question] = None
+                            total_changes += 1
+                            data[node[0]]["lastUpdated"] = newest_history_date
+                            changes_to_current_file += 1
+                            if node[0] not in ids_of_updated_files:
+                                ids_of_updated_files.append(node[0])
+                    # check if a given value was deleted
+                    for quest in new_answers:
+                        if quest not in newFetchedAnswers and quest in data[node[0]]["answer"].keys():
+                            data[node[0]]["answer"].update({quest: None})
+                            total_changes += 1
+                            changes_to_current_file += 1
+                            data[node[0]]["lastUpdated"] = newest_history_date
+                            if node[0] not in ids_of_updated_files:
+                                ids_of_updated_files.append(node[0])
+
                     # create new BackupFile if changes to current file were made
-                    if changesToCurFile != 0:
+                    if changes_to_current_file != 0:
                         os.chdir("BackupFiles")
-                        toSave = {}
-                        toSave[node[0]] = data[node[0]]
-                        self.saveAsJson(toSave, node[0] + r"-" + str(time.time()))
+                        to_save = {}
+                        to_save[node[0]] = data[node[0]]
+                        self.saveAsJson(to_save, node[0] + r"-" + str(time.time()))
                         os.chdir("..")
 
 
         # update the new BackupJSON with the new time
-        if totalChanges !=0:
+        if total_changes !=0:
             # Update nameNewestBackupFile variable
-            print(totalChanges," were made")
-            newName = "BackUp"+str(time.time())+".json"
-            self.nameNewestBackupFile = newName
-            with open(newName, "w", encoding='utf-8') as f:
+            print(total_changes," were made")
+            new_name = "BackUp"+str(time.time())+".json"
+            self.nameNewestBackupFile = new_name
+            with open(new_name, "w", encoding='utf-8') as f:
                 json.dump(data,f, indent=2)
-        return idsofupdatedfiles, idsToFreeze
+        return ids_of_updated_files, ids_to_freeze
 
 
     def mostRecentFileByID(self, id):
@@ -687,14 +710,14 @@ fragment FieldAnswer on Answer {
         Fetches all the working items again and checks if they are new, if yes it appends to the current BackUp file
         :return: Returns the new forms.
         """
-        newitems = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
+        new_items = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, dateTime=self.lastChecked)
         # Update the last checked time to the current UCT time, as the server runs on UCT time.
         self.lastChecked = datetime.now().utcnow().isoformat()
-        newforms = self.helperFunctionForExtracionAndSaving(newitems)
-        if newforms:
-            self.writeOnCurrentBackUpFile(newforms)
-            print("new item", newforms)
-            return newforms
+        new_forms = self.helperFunctionForExtracionAndSaving(new_items)
+        if new_forms:
+            self.writeOnCurrentBackUpFile(new_forms)
+            print("new item", new_forms)
+            return new_forms
         else:return
 
 
@@ -705,28 +728,28 @@ fragment FieldAnswer on Answer {
         :return: Returns the BackUp file with all nodes and all its relevant variables.
         """
         final = {}
-        currStringTime = str(time.time())
+        curr_string_time = str(time.time())
         # Loop trough the file with all the forms.
         for node in allWorkItemsJson["allCases"]["edges"]:
             nested = {}
             # Feed each node into getRelevantInfoAllWorkingItems, to extract the relevant information.
-            relevantData = self.getRelevantInfoAllWorkingItems(node)
-            IDofCurrentNode = node["node"]["document"]["id"]
+            relevant_data = self.getRelevantInfoAllWorkingItems(node)
+            id_of_current_node = node["node"]["document"]["id"]
             os.chdir("Answers")
             # Save the new fetched answer file from the forms inside the Answers directory.
-            self.saveAsJson(self.getDocument(IDofCurrentNode, self.getAnswerQuery),
-                            "Answer_" + IDofCurrentNode + currStringTime)
+            self.saveAsJson(self.getDocument(id_of_current_node, self.getAnswerQuery),
+                            "Answer_" + id_of_current_node + curr_string_time)
             # Call getRelevantInfoFromJsonAnswers to extract all the relevant variables from the new
             # fetched answer file.
-            relevantData["answer"] = self.getRelevantInfoFromJsonAnswers(
-                "Answer_" + IDofCurrentNode + currStringTime + ".json")
-            nested[relevantData["id"]] = relevantData
+            relevant_data["answer"] = {key:val for key, val in self.getRelevantInfoFromJsonAnswers(
+                "Answer_" + id_of_current_node + curr_string_time + ".json").items() if val != "tbt"}
+            nested[relevant_data["id"]] = relevant_data
             final.update(nested)
             os.chdir("..")
             os.chdir("BackupFiles")
             # Save the new organized JSON with the extracted variables also to the BackupFiles folder.
             if nested:
-                self.saveAsJson(nested,(relevantData["id"] + r"-" + str(time.time())))
+                self.saveAsJson(nested,(relevant_data["id"] + r"-" + str(time.time())))
             os.chdir("..")
         return final
 
@@ -745,22 +768,22 @@ fragment FieldAnswer on Answer {
             # check if the file where all the frozen files are saved already exists.
             if os.path.exists(r"FrozenIDs.json"):
                 frozen = open("FrozenIDs.json", "r+", encoding='utf-8')
-                alredyFrozen = json.load(frozen)
+                alredy_frozen = json.load(frozen)
             else:
                 frozen = open("FrozenIDs.json", "w", encoding='utf-8')
-                alredyFrozen = {}
+                alredy_frozen = {}
             # Iterate through the ids of the files which need to be frozen.
             for id in ids:
                 # create the same data structure as in the BackUp file, and add to the alreadyFrozen file.
                 popped = data.pop(id)
-                alredyFrozen[popped["id"]] = popped
-                alredyFrozen[popped["id"]]["status"] = "COMPLETED"
+                alredy_frozen[popped["id"]] = popped
+                alredy_frozen[popped["id"]]["status"] = "COMPLETED"
             # Overwrite the old file with the new appended JSON file
             frozen.seek(0)
-            json.dump(alredyFrozen,frozen, indent=2)
+            json.dump(alredy_frozen,frozen, indent=2)
             frozen.truncate()
             frozen.close()
-            print("new frozenIDs file: ", alredyFrozen)
+            print("new frozenIDs file: ", alredy_frozen)
             print("new backup file without any frozenfiles file: ", data)
             # Save the BackUp file with the RUNNING files, as all COMPLETED ones were frozen.
             f.seek(0)
@@ -776,25 +799,25 @@ fragment FieldAnswer on Answer {
         Writes a JSON onto the currents BackUp JSON.
         """
         with open(self.nameNewestBackupFile, "r+", encoding='utf-8') as f:
-            currData = json.loads(f.read())
+            curr_data = json.loads(f.read())
             # Appends to the current file and overwrites the outdated data
-            currData.update(fileToAppend)
+            curr_data.update(fileToAppend)
             f.seek(0)
-            json.dump(currData, f, indent=2)
+            json.dump(curr_data, f, indent=2)
             f.truncate()
 
 
     # May need some rework
-    def getRelevantInfoFromJsonAnswers(self, jsonname, searchwords=None):
+    def getRelevantInfoFromJsonAnswers(self, jsonname, search_words=None):
         """
         Extracts certain variables from a JSON containing the answers to a filled out from.
         :param jsonname: Name of the (JSON) file that needs to be searched.
-        :param searchwords: The variables that are relevant and need to be extracted.
+        :param search_words: The variables that are relevant and need to be extracted.
         :return:
         """
         # take the predefined searchwords, if the variable is not defined.
-        if searchwords is None:
-            searchwords = self.searchFilterMilkRelated
+        if search_words is None:
+            search_words = self.searchFilterMilkRelated
         final = {}
         # check if a name of a file is given, or a whole file is passed in the function
         if type(jsonname) == str:
@@ -804,21 +827,17 @@ fragment FieldAnswer on Answer {
             loaded = jsonname
 
         # check all answer nodes for relevant variables
-        for node in loaded["allDocuments"]["edges"][0]["node"]["answers"]["edges"]:
-            if node['node']['question']['slug'] in searchwords:
-                for k in node['node']:
+        if type(loaded) == dict:
+            for k, v in loaded.items():
+                if type(v) == dict or type(v) == list:
+                    final = final | self.getRelevantInfoFromJsonAnswers(v, search_words)
+                if "tbt" in final.values():
                     if "Value" in k:
-                        final[node['node']["question"]["slug"]] = node['node'][k]
-
-            # check all the tables, if there is no table, the first if statement will throw an exception.
-            try:
-                if node['node']['tableValue']:
-                    for awnserNode in node['node']["tableValue"][0]["answers"]["edges"]:
-                        if awnserNode['node']['question']['slug'] in searchwords:
-                            for k in awnserNode['node']:
-                                if "Value" in k:
-                                    final[awnserNode['node']["question"]["slug"]] = awnserNode['node'][k]
-            except:
-                pass
+                        final.update({ke: v for ke, val in final.items() if type(v) in [str, float, int]})
+                if v in search_words:
+                    final[v] = "tbt"
+        elif type(loaded) == list:
+            for element in loaded:
+                final = final | self.getRelevantInfoFromJsonAnswers(element, search_words)
 
         return final
