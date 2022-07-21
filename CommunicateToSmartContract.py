@@ -7,7 +7,7 @@ from web3 import Web3
 
 class CommunicateToSmartContract:
     def __init__(self):
-        self.__mySCAdress = "0xfb0a5EAFb81b30E167e0e6b7bcFa0b6c95d6dA03"
+        self.__mySCAdress = "0x528CEc34134f3DfEF14727Ad2530dB59389d0210"
         self.abi = """[
 	{
 		"anonymous": false,
@@ -354,22 +354,24 @@ class CommunicateToSmartContract:
 		"type": "function"
 	}
 ]"""
-        self.ScAddress = '0x970d9800D1000DB152Eb30f0414F6d971CbF834a'
+        self.ScAddress = '0x1D75719B8f6116a5D21C0b650C6134e66A3a38bB'
         self.w3 = Web3(Web3.HTTPProvider('HTTP://127.0.0.1:7545'))
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
     def createHash(self, jsontohash):
-        #TODO somehow the hash online and the one created here is not the same
+        # TODO somehow the hash online and the one created here is not the same
         return hashlib.sha256(json.dumps(jsontohash).encode('utf8')).hexdigest()
 
-    def createNewFormSmartContract(self, id, data):
-        self.contract_instance.functions.createForm(id, data["name"], 1391, data["id"]+str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
+    def createNewFormSmartContract(self, id, data, name_of_file):
+        self.contract_instance.functions.createForm(id, data["name"], 1391, name_of_file,
+                                                    self.createHash(data), "").transact({'from': self.__mySCAdress})
 
-    def uptateFormOnSmartContract(self, id, BackUpFileName):
+    def uptateFormOnSmartContract(self, id, BackUpFileName, name_of_file):
         with open(BackUpFileName, 'r', encoding='utf-8') as f:
-            data = json.load(f) # Todo 1391 ersetzen mit  data[id]["lastmodified by"]
-        self.contract_instance.functions.updateForm(id, 1391,# additional answers may be given
-                                                        data[id]["id"] + str(time.time()), self.createHash(data), "").transact({'from': self.__mySCAdress})
+            data = json.load(f)  # Todo 1391 ersetzen mit  data[id]["lastmodified by"]
+        self.contract_instance.functions.updateForm(id, 1391,  # additional answers may be given
+                                                    name_of_file, self.createHash(data),
+                                                    "").transact({'from': self.__mySCAdress})
 
     def freezeForm(self, id):
         self.contract_instance.functions.freezeForm(id).transact({'from': self.__mySCAdress})
@@ -377,4 +379,3 @@ class CommunicateToSmartContract:
     def sendTopublicBC(self):
         pass
         # TODO: implement the communication to the public BC
-
