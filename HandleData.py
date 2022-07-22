@@ -669,6 +669,7 @@ fragment FieldAnswer on Answer {
                             data[node[0]]["answer"][question] = newVal
                             total_changes += 1
                             data[node[0]]["lastUpdated"] = newest_history_date
+                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             changes_to_current_file += 1
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
@@ -680,6 +681,7 @@ fragment FieldAnswer on Answer {
                             total_changes += 1
                             changes_to_current_file += 1
                             data[node[0]]["lastUpdated"] = newest_history_date
+                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
 
