@@ -33,7 +33,7 @@ class HandleData:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
         }
         self.data = {
-            'refresh_token': '7a1d967f2e0843918d6ffa3f091eae46',
+            'refresh_token': 'a3323fa815a14d2abde59304a521ae3c',
             'client_id': 'pc',
             'grant_type': 'refresh_token',
             'redirect_uri': 'https://beta.qs.fromarte.ch/login',
@@ -663,6 +663,7 @@ fragment FieldAnswer on Answer {
                             data[node[0]]["answer"][question] = newVal
                             total_changes += 1
                             data[node[0]]["lastUpdated"] = newest_history_date
+                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             changes_to_current_file += 1
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
@@ -673,6 +674,7 @@ fragment FieldAnswer on Answer {
                             total_changes += 1
                             changes_to_current_file += 1
                             data[node[0]]["lastUpdated"] = newest_history_date
+                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
 
