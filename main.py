@@ -49,7 +49,7 @@ def firstTimeRun():
         # save the relevant data inside a nested json called BackUp
         d.nameNewestBackupFile = back_up_file_name
         with open(back_up_file_name, 'w', encoding='utf-8') as jsonFile:
-            final, local_names = d.helperFunctionForExtracionAndSaving(loaded)
+            final, local_names = d.helperFunctionForExtractionAndSaving(loaded)
             json.dump(final, jsonFile, indent=2)
             print("ran for the fist time")
             # send the created BackUp JSON to the local BC
