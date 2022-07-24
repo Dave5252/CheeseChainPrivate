@@ -616,8 +616,10 @@ fragment FieldAnswer on Answer {
             # loop through all stored documents
             for node in data.items():
                 changes_to_current_file = 0
-                # Initiate a random date in the past.
-                newest_history_date = "2000-07-19T19:27:19.121610"
+                newest_history_date = data[node[0]]["lastUpdated"]
+                if not node[1]["lastUpdated"]:
+                    # Initiate a random date in the past.
+                    newest_history_date = "2000-07-19T19:27:19.121610"
                 # check if the document is already frozen after first fetching
                 if node[1]['status'] != 'RUNNING':
                     ids_to_freeze.append(node[0])
@@ -635,7 +637,7 @@ fragment FieldAnswer on Answer {
                     question = historical_answer["node"]["question"]["slug"]
                     hist_date = historical_answer["node"]["historyDate"]
                     if historical_answer["node"]["historyType"] == "~" and question in self.searchFilterMilkRelated \
-                            and node[1]["lastUpdated"] != hist_date[:(hist_date.index("+"))]:
+                            and newest_history_date != hist_date[:(hist_date.index("+"))]:
                         # something was altered or deleted and is new
                         new_answers.append(question)
                         if dateutil.parser.parse(newest_history_date) < dateutil.parser.parse(
@@ -663,11 +665,9 @@ fragment FieldAnswer on Answer {
                             if node[1]["answer"][question] or node[1]["answer"][question] == None:
                                 if node[1]["answer"][question] != newVal:
                                     # the new value was really new
-                                    data[node[0]]["lastModifiedBy"] = modifiedByWho
                                     data[node[0]]["answer"][question] = newVal
-                                    # update the lastUpdated time
-                                    data[node[0]]["lastUpdated"] = newest_history_date
                                     total_changes += 1
+                                    print("im here but not doing anything")
                                     changes_to_current_file += 1
                                     if node[0] not in ids_of_updated_files:
                                         ids_of_updated_files.append(node[0])
@@ -675,8 +675,6 @@ fragment FieldAnswer on Answer {
                             # Catch if question does not exist
                             data[node[0]]["answer"][question] = newVal
                             total_changes += 1
-                            data[node[0]]["lastUpdated"] = newest_history_date
-                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             changes_to_current_file += 1
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
@@ -687,13 +685,14 @@ fragment FieldAnswer on Answer {
                             data[node[0]]["answer"].update({quest: None})
                             total_changes += 1
                             changes_to_current_file += 1
-                            data[node[0]]["lastUpdated"] = newest_history_date
-                            data[node[0]]["lastModifiedBy"] = modifiedByWho
                             if node[0] not in ids_of_updated_files:
                                 ids_of_updated_files.append(node[0])
 
                     # create new BackupFile if changes to current file were made
                     if changes_to_current_file != 0:
+                        # update the lastUpdated time
+                        data[node[0]]["lastUpdated"] = newest_history_date
+                        data[node[0]]["lastModifiedBy"] = modifiedByWho
                         os.chdir("BackupFiles")
                         to_save = {}
                         to_save[node[0]] = data[node[0]]
