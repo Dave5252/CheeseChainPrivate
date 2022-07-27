@@ -651,10 +651,12 @@ fragment FieldAnswer on Answer {
                         if dateutil.parser.parse(newest_history_date) < dateutil.parser.parse(
                                 hist_date[:(hist_date.index("+"))]):
                             newest_history_date = hist_date[:(hist_date.index("+"))]
+                        modifiedByWho = historical_answer["node"]["historyUserId"]
                     # "Kultur" related variables need to be handled differently, 833-10-kultur-lotnummer and 833-10-kultur variables need to be appended m.anually
                     if historical_answer["node"]["question"]["label"] == "Kulturen" and node[1]["lastUpdated"] != \
                             historical_answer["node"]["historyDate"]:
                         new_answers.extend(["833-10-kultur", "833-10-kultur-lotnummer"])
+                        modifiedByWho = historical_answer["node"]["historyUserId"]
                 if new_answers:
                     # check if the new answers are really new maybe the historical answer is the same.
                     # This makes sure no unnecessary transaction will me triggered.
@@ -667,7 +669,6 @@ fragment FieldAnswer on Answer {
                                     # the new value was really new
                                     data[node[0]]["answer"][question] = newVal
                                     total_changes += 1
-                                    print("im here but not doing anything")
                                     changes_to_current_file += 1
                                     if node[0] not in ids_of_updated_files:
                                         ids_of_updated_files.append(node[0])
