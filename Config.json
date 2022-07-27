@@ -1,0 +1,12 @@
+{
+    "config":
+    {
+      "fromarte": {
+        "refresh_token": "97877c4872b94f93bb4068b625f4d290"
+      },
+      "blockchain": {
+        "smart_contract_address": "0xAc758E6e838808526E1ad29998d29f3885AF2f62",
+        "my_address": "0x83e17AB458A1F974300Eb84e5771ec0a92E44288"
+      }
+    }
+}
