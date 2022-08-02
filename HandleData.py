@@ -490,9 +490,7 @@ fragment FieldAnswer on Answer {
                  """
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
         self.nameNewestBackupFile = ""
-        self.searchFilterMilkRelated = ["833-10-milchmenge", "833-10-lab-lot-nummer", "833-10-kultur-lotnummer",
-                                        "833-10-uhrzeit", "833-10-temperatur", "833-10-temperatur-gelagerte-milch",
-                                        "833-10-stuckzahl-produzierte-kase", "833-10-datum", "833-10-kultur"]
+        self.searchFilterMilkRelated = config["config"]["search_words"]
 
     def refreshToken(self):
         """
