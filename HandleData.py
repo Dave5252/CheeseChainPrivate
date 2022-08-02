@@ -604,6 +604,7 @@ fragment FieldAnswer on Answer {
         :return: The IDs of the Files that were altered/updated. The ID of the forms, that were frozen. And
         the local Names of the file names (ID-Unix timestamp).
         """
+        st = time.time()
         ids_of_updated_files = []
         ids_to_freeze = []
         local_names = []
@@ -708,6 +709,9 @@ fragment FieldAnswer on Answer {
             self.nameNewestBackupFile = new_name
             with open(new_name, "w", encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
+        et= time.time()
+        print('Execution time (extraction  8):', et-st, 'seconds')
+
         return ids_of_updated_files, ids_to_freeze, local_names
 
     def compareDates(self, curr_date, hist_date):
@@ -755,6 +759,8 @@ fragment FieldAnswer on Answer {
         local_names = []
         curr_string_time = str(time.time())
         # Loop trough the file with all the forms.
+        fünf = 0
+        sechs = 0
         for node in all_work_items_json["allCases"]["edges"]:
             nested = {}
             # Feed each node into getRelevantInfoAllWorkingItems, to extract the relevant information.
@@ -762,13 +768,18 @@ fragment FieldAnswer on Answer {
             id_of_current_node = node["node"]["document"]["id"]
             os.chdir("Answers")
             # Save the new fetched answer file from the forms inside the Answers directory.
+            st = time.time()
             self.saveAsJson(self.getDocument(id_of_current_node, self.getAnswerQuery),
                             "Answer_" + id_of_current_node + curr_string_time)
+            et = time.time()
+            fünf+= et-st
+            stt = time.time()
             # Call getRelevantInfoFromJsonAnswers to extract all the relevant variables from the new
-            # fetched answer file.
             relevant_data["answer"] = {key: val for key, val in self.getRelevantInfoFromJsonAnswers(
                 "Answer_" + id_of_current_node + curr_string_time + ".json").items() if val != "tbt"}
             nested[relevant_data["id"]] = relevant_data
+            ett = time.time()
+            sechs += ett - stt
             final.update(nested)
             os.chdir("..")
             os.chdir("BackupFiles")
@@ -778,6 +789,8 @@ fragment FieldAnswer on Answer {
                 local_names.append(name_of_file)
                 self.saveAsJson(nested, name_of_file)
             os.chdir("..")
+        print('Execution time (fetching each form separately 5):', fünf, 'seconds')
+        print('Execution time (extraction  6):', sechs, 'seconds')
         return final, local_names
 
     def freezeForm(self, ids):

@@ -10,14 +10,13 @@ c = CommunicateToSmartContract()
 
 
 def main():
+    global st
     st = time.time()
     d.refreshToken()
-    tt = time.time()
-    print('Execution time (refreshing token):', tt - st, 'seconds')
     d.saveAsJson(d.getAllWorkingItems(d.getAllWorkingItemsQuery), "AllWorkingItems")
     firstTimeRun()
     et = time.time()
-    print('Execution time (first time run):', et - st, 'seconds')
+    print('Execution time (Fetching, data parsing and BC interaction 1):', et - st, 'seconds')
     while True:
         d.refreshToken()
         refetchingFreezingAndUpdating()
@@ -39,7 +38,11 @@ def refetchingFreezingAndUpdating():
         print("nothing to update")
     if ids_to_freeze:
         d.freezeForm(ids_to_freeze)
+        st = time.time()
         [c.freezeForm(id) for id in ids_to_freeze]
+        et = time.time()
+        print('Execution time (cfreezing all COMPLETED forms 7):', et - st, 'seconds')
+
 
 
 def creteNewFormOnSC(newFiles, local_names):
@@ -59,14 +62,15 @@ def firstTimeRun():
             final, local_names = d.helperFunctionForExtractionAndSaving(loaded)
             json.dump(final, jsonFile, indent=2)
             ett = time.time()
-            print('Execution time (extracting and fetching each form separately):', ett - stt, 'seconds')
+            print('Execution time (extracting and fetching each form separately 4):', ett - stt, 'seconds')
+            print('Execution time (Mirror the DB onto the host 2):', ett - stt, 'seconds')
             print("ran for the fist time")
             # send the created BackUp JSON to the local BC
-            st = time.time()
+            stBC = time.time()
             for id, val in final.items():
                 c.createNewFormSmartContract(id, val, [item for item in local_names if item.startswith(id)][0])
             et = time.time()
-            print('Execution time (creating SC on BC):', et - st, 'seconds')
+            print('Execution time (creating SC on BC 3):', et - stBC, 'seconds')
 
 
 if __name__ == '__main__':
