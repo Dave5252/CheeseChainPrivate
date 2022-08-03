@@ -8,6 +8,7 @@ import requests
 
 f = open("Config.json", 'r', encoding='utf-8')
 config = json.load(f)
+
 class HandleData:
     def __init__(self):
         self.cookies = {
@@ -41,10 +42,10 @@ class HandleData:
         }
 
         self.authToken = "0"
-        self.lastChecked = '2022-12-14T15:46:19.944445'  # when running first time needs to be changed
+        self.lastChecked = '2022-12-14T15:46:19.944445'  # some artificial data in the future, will be changed when
+        # running the code.
         self.getAnswerQuery = config["config"]["queries"]["getAnswerQuery"]
         self.getHistAnswerQuery = config["config"]["queries"]["getHistAnswerQuery"]
-
         self.getAllWorkingItemsQuery = config["config"]["queries"]["getAllWorkingItemsQuery"]
         self.getAllWorkingItemsAfterQuery = config["config"]["queries"]["getAllWorkingItemsAfterQuery"]
         self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
@@ -210,7 +211,8 @@ class HandleData:
                                 hist_date[:(hist_date.index("+"))]):
                             newest_history_date = hist_date[:(hist_date.index("+"))]
                         modifiedByWho = historical_answer["node"]["historyUserId"]
-                    # "Kultur" related variables need to be handled differently, 833-10-kultur-lotnummer and 833-10-kultur variables need to be appended m.anually
+                    # "Kultur" related variables need to be handled differently, 833-10-kultur-lotnummer and
+                    # 833-10-kultur variables need to be appended manually
                     if historical_answer["node"]["question"]["label"] == "Kulturen" and node[1]["lastUpdated"] != \
                             historical_answer["node"]["historyDate"]:
                         new_answers.extend(["833-10-kultur", "833-10-kultur-lotnummer"])
@@ -222,7 +224,7 @@ class HandleData:
                         self.getDocument(node[0], self.getAnswerQuery), new_answers).items() if val != "tbt"}
                     for question, newVal in new_fetched_answers.items():
                         try:
-                            if node[1]["answer"][question] or node[1]["answer"][question] == None:
+                            if node[1]["answer"][question] or node[1]["answer"][question] is None:
                                 if node[1]["answer"][question] != newVal:
                                     # the new value was really new
                                     data[node[0]]["answer"][question] = newVal
@@ -268,8 +270,8 @@ class HandleData:
             self.nameNewestBackupFile = new_name
             with open(new_name, "w", encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-        et= time.time()
-        print('Execution time (extraction  8):', et-st, 'seconds')
+        et = time.time()
+        print('Execution time (extraction  8):', et - st, 'seconds')
 
         return ids_of_updated_files, ids_to_freeze, local_names
 
@@ -331,7 +333,7 @@ class HandleData:
             self.saveAsJson(self.getDocument(id_of_current_node, self.getAnswerQuery),
                             "Answer_" + id_of_current_node + curr_string_time)
             et = time.time()
-            fünf+= et-st
+            fünf += et - st
             stt = time.time()
             # Call getRelevantInfoFromJsonAnswers to extract all the relevant variables from the new
             relevant_data["answer"] = {key: val for key, val in self.getRelevantInfoFromJsonAnswers(
