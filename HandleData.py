@@ -42,8 +42,7 @@ class HandleData:
         }
 
         self.authToken = "0"
-        self.lastChecked = '2022-12-14T15:46:19.944445'  # some artificial data in the future, will be changed when
-        # running the code.
+        self.lastChecked = '2022-12-14T15:46:19.944445'  # some artificial data in the future
         self.getAnswerQuery = config["config"]["queries"]["getAnswerQuery"]
         self.getHistAnswerQuery = config["config"]["queries"]["getHistAnswerQuery"]
         self.getAllWorkingItemsQuery = config["config"]["queries"]["getAllWorkingItemsQuery"]
@@ -162,7 +161,8 @@ class HandleData:
         given. The Functions then updates the new or altered answers on the JSON and saves the new file locally in the
         Backup folder.
         :return: The IDs of the Files that were altered/updated. The ID of the forms, that were frozen. And
-        the local Names of the file names (ID-Unix timestamp).
+        the local Names of the file names (ID-Unix timestamp) for consistent naming.
+
         """
         st = time.time()
         ids_of_updated_files = []
@@ -314,7 +314,9 @@ class HandleData:
         """
         Helps extracting and organizing relevant info from all the forms from the digitalQM. Fetches the corresponding
         answer JSON from each form.
-        :return: Returns the BackUp file with all nodes and all its relevant variables.
+        :param all_work_items_json: The AllWorkingItems json with all the items in the DigitalQM.
+        :return: Returns the BackUp file with all nodes and all its relevant variables, plus the local names
+        for consistent naming.
         """
         final = {}
         local_names = []
