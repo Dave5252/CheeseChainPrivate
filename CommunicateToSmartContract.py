@@ -19,7 +19,6 @@ class CommunicateToSmartContract:
         :param json_to_hash: The file (dictionary) that needs to be hashed.
         :return:
         """
-        # TODO somehow the hash online and the one created here is not the same
         return hashlib.sha256(json.dumps(json_to_hash).encode('utf8')).hexdigest()
 
     def createNewFormSmartContract(self, id, data, name_of_file):
@@ -40,7 +39,7 @@ class CommunicateToSmartContract:
         :param name_of_file: Name of the local file. "ID-Unix timestamp"
         """
         with open(backup_file_name, 'r', encoding='utf-8') as f:
-            data = json.load(f)  # Todo 1391 ersetzen mit  data[id]["lastmodified by"]
+            data = json.load(f)
         self.contract_instance.functions.updateForm(id, 1391,  # additional answers may be given
                                                     name_of_file, self.createHash(data),
                                                     "").transact({'from': self.__mySCAdress})
