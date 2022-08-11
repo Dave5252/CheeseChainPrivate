@@ -266,7 +266,7 @@ class HandleData:
         if total_changes != 0:
             # Update nameNewestBackupFile variable
             print(total_changes, " were made")
-            new_name = "BackUp" + str(time.time()) + ".json"
+            new_name = "BackUp" + str(int(time.time())) + ".json"
             self.nameNewestBackupFile = new_name
             with open(new_name, "w", encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
@@ -320,7 +320,7 @@ class HandleData:
         """
         final = {}
         local_names = []
-        curr_string_time = str(time.time())
+        curr_string_time = str(int(time.time()))
         # Loop trough the file with all the forms.
         fünf = 0
         sechs = 0

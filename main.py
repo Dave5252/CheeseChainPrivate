@@ -76,7 +76,7 @@ def firstTimeRun():
     """
     Helper function when the script is first ran. Creating the Backup file, saving the forms and their answers locally.
     """
-    back_up_file_name = 'BackUp' + str(time.time()) + ".json"
+    back_up_file_name = 'BackUp' + str(int(time.time())) + ".json"
     stt = time.time()
     with open(r'AllWorkingItems.json', encoding='utf-8') as f:
         loaded = json.load(f)
