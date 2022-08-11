@@ -257,7 +257,7 @@ class HandleData:
                         os.chdir("BackupFiles")
                         to_save = {}
                         to_save[node[0]] = data[node[0]]
-                        local_name = node[0] + r"-" + str(time.time())
+                        local_name = node[0] + r"-" + str(int(time.time()))
                         local_names.append(local_name)
                         self.saveAsJson(to_save, local_name)
                         os.chdir("..")
@@ -348,7 +348,7 @@ class HandleData:
             os.chdir("BackupFiles")
             # Save the new organized JSON with the extracted variables also to the BackupFiles folder.
             if nested:
-                name_of_file = relevant_data["id"] + r"-" + str(time.time())
+                name_of_file = relevant_data["id"] + r"-" + str(int(time.time()))
                 local_names.append(name_of_file)
                 self.saveAsJson(nested, name_of_file)
             os.chdir("..")
