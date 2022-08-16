@@ -6,7 +6,7 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 import requests
 
-f = open("Config.json", 'r', encoding='utf-8')
+f = open("Config.json", 'r+', encoding='utf-8')
 config = json.load(f)
 
 class HandleData:
@@ -71,6 +71,9 @@ class HandleData:
         # Allocate the two token.
         self.authToken = response_data["access_token"]
         self.data['refresh_token'] = response_data["refresh_token"]
+        config["config"]["fromarte"]["refresh_token"] = response_data["refresh_token"]
+        with open("Config.json", "w") as jsonFile:
+            json.dump(config, jsonFile, indent=4)
 
     def getAllWorkingItems(self, query, date_Time=None):
         """
