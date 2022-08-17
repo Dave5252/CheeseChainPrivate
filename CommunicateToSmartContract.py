@@ -1,6 +1,7 @@
 import hashlib
 import json
 from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 f = open("Config.json", 'r', encoding='utf-8')
 config = json.load(f)
@@ -11,6 +12,7 @@ class CommunicateToSmartContract:
         self.abi = config["config"]["blockchain"]["abi"]
         self.ScAddress = config["config"]["blockchain"]["CREATED_CONTRACT_ADDRESS"]
         self.w3 = Web3(Web3.HTTPProvider(config["config"]["blockchain"]["RPC_SERVER"]))
+        self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.contract_instance = self.w3.eth.contract(address=self.ScAddress, abi=self.abi)
 
     def createHash(self, json_to_hash):
