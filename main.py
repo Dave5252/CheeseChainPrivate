@@ -11,25 +11,19 @@ c = CommunicateToSmartContract()
 
 def main():
     """
-    Main function, calling the most important functions. Everything before the the while true loop is executed only
+    Main function, calling the most important functions. Everything before the while true loop is executed only
     once. The while true loop is a infinite loop, meaning the DigitalQM is always checked for new forms and the RUNNING
     ones are updated.
 
     """
-    global st
-    st = time.time()
     d.refreshToken()
     d.saveAsJson(d.getAllWorkingItems(d.getAllWorkingItemsQuery), "AllWorkingItems")
     firstTimeRun()
-    et = time.time()
-    print('Execution time (Fetching, data parsing and BC interaction 2):', et - st, 'seconds')
     while True:
         d.refreshToken()
         refetchingFreezingAndUpdating()
         new_files, local_names = d.checkForNewFiles()
         creteNewFormOnSC(new_files, local_names)
-        et = time.time()
-        print('Execution time (Fetching, data parsing and BC interaction& updatign freezing 1):', et - st, 'seconds')
         # time.sleep(200)
         time.sleep(10)
 
@@ -53,11 +47,8 @@ def refetchingFreezingAndUpdating():
     if ids_to_freeze:
         # Freeze locally
         d.freezeForm(ids_to_freeze)
-        st = time.time()
         # Freeze on BC
         [c.freezeForm(id) for id in ids_to_freeze]
-        et = time.time()
-        print('Execution time (cfreezing all COMPLETED forms 7):', et - st, 'seconds')
 
 
 
@@ -77,7 +68,6 @@ def firstTimeRun():
     Helper function when the script is first ran. Creating the Backup file, saving the forms and their answers locally.
     """
     back_up_file_name = 'BackUp' + str(int(time.time())) + ".json"
-    stt = time.time()
     with open(r'AllWorkingItems.json', encoding='utf-8') as f:
         loaded = json.load(f)
         # save the relevant data inside a nested json called BackUp
@@ -87,16 +77,11 @@ def firstTimeRun():
             # extract. The Returns the local names and the json for the BackUp file.
             final, local_names = d.helperFunctionForExtractionAndSaving(loaded)
             json.dump(final, jsonFile, indent=2)
-            ett = time.time()
-            print('Execution time (Mirror the DB onto the host 2):', ett - stt, 'seconds')
             print("ran for the fist time")
             # send the created BackUp JSON to the local BC
-            stBC = time.time()
             for id, val in final.items():
                 # For each form create an instance on the BC
                 c.createNewFormSmartContract(id, val, [item for item in local_names if item.startswith(id)][0])
-            et = time.time()
-            print('Execution time (creating SC on BC 3):', et - stBC, 'seconds')
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ import requests
 f = open("Config.json", 'r+', encoding='utf-8')
 config = json.load(f)
 
+
 class HandleData:
     def __init__(self):
         self.cookies = {
@@ -75,7 +76,7 @@ class HandleData:
         with open("Config.json", "w") as jsonFile:
             json.dump(config, jsonFile, indent=4)
 
-    def getAllWorkingItems(self, query, date_Time=None):
+    def getAllWorkingItems(self, query, date_time=None):
         """
         Returns a JSON with all the open forms and corresponding information (i.e. UserID of creator, creation date)
         :return: Returns the received JSON.
@@ -87,7 +88,7 @@ class HandleData:
         # Set the time to the time that it was last checked
         params = {"dateTime": self.lastChecked}
         # If the dateTime is needed (when checking for new forms), execute with the params.
-        if date_Time:
+        if date_time:
             response = client.execute(query, variable_values=params)
         else:
             response = client.execute(query)
@@ -167,7 +168,6 @@ class HandleData:
         the local Names of the file names (ID-Unix timestamp) for consistent naming.
 
         """
-        st = time.time()
         ids_of_updated_files = []
         ids_to_freeze = []
         local_names = []
@@ -273,8 +273,6 @@ class HandleData:
             self.nameNewestBackupFile = new_name
             with open(new_name, "w", encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-        et = time.time()
-        print('Execution time (extraction  8):', et - st, 'seconds')
 
         return ids_of_updated_files, ids_to_freeze, local_names
 
@@ -302,7 +300,7 @@ class HandleData:
         Fetches all the working items again and checks if they are new, if yes it appends to the current BackUp file
         :return: Returns the new forms.
         """
-        new_items = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, date_Time=self.lastChecked)
+        new_items = self.getAllWorkingItems(query=self.getAllWorkingItemsAfterQuery, date_time=self.lastChecked)
         # Update the last checked time to the current UCT time, as the server runs on UCT time.
         self.lastChecked = datetime.now().utcnow().isoformat()
         new_forms, local_names = self.helperFunctionForExtractionAndSaving(new_items)
@@ -325,8 +323,6 @@ class HandleData:
         local_names = []
         curr_string_time = str(int(time.time()))
         # Loop trough the file with all the forms.
-        fünf = 0
-        sechs = 0
         for node in all_work_items_json["allCases"]["edges"]:
             nested = {}
             # Feed each node into getRelevantInfoAllWorkingItems, to extract the relevant information.
@@ -337,15 +333,10 @@ class HandleData:
             st = time.time()
             self.saveAsJson(self.getDocument(id_of_current_node, self.getAnswerQuery),
                             "Answer_" + id_of_current_node + curr_string_time)
-            et = time.time()
-            fünf += et - st
-            stt = time.time()
             # Call getRelevantInfoFromJsonAnswers to extract all the relevant variables from the new
             relevant_data["answer"] = {key: val for key, val in self.getRelevantInfoFromJsonAnswers(
                 "Answer_" + id_of_current_node + curr_string_time + ".json").items() if val != "tbt"}
             nested[relevant_data["id"]] = relevant_data
-            ett = time.time()
-            sechs += ett - stt
             final.update(nested)
             os.chdir("..")
             os.chdir("BackupFiles")
@@ -355,8 +346,6 @@ class HandleData:
                 local_names.append(name_of_file)
                 self.saveAsJson(nested, name_of_file)
             os.chdir("..")
-        print('Execution time (fetching each form separately 5):', fünf, 'seconds')
-        print('Execution time (extraction  6):', sechs, 'seconds')
         return final, local_names
 
     def freezeForm(self, ids):
@@ -390,7 +379,6 @@ class HandleData:
             frozen.truncate()
             frozen.close()
             print("new frozenIDs file: ", already_frozen)
-            print("new backup file without any frozenfiles file: ", data)
             # Save the BackUp file with the RUNNING files, as all COMPLETED ones were frozen.
             f.seek(0)
             json.dump(data, f, indent=2)
