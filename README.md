@@ -33,7 +33,7 @@ To run the main file the the SC needs to be deployed and the refresh token needs
  4. Select Ganache as an Environment, paste in the **RPC SERVER** address.
  5. Deploy the SC
  6. On Ganache in transactions select the deployed SC and copy the **SENDER ADDRESS** and **CREATED CONTRACT ADDRESS** into the corresponding variables in the `config.json` `["config"]["blockchain"]` file in the directory.
- 7. Login into Fromarte, with the Developer Tools Interface (F12) open on the network tab and copy the refresh token from the `token` into the `config.json file`  `["config"]["fromarte"]`.
+ 7. (Only if the refresh token is invalid. I.e., after logging in with the account on a different host) Login into Fromarte, with the Developer Tools Interface (F12) open on the network tab and copy the refresh token from the `token` into the `config.json file`  `["config"]["fromarte"]`.
  8. Run the `main.py` file
 
 ## Synchronization
