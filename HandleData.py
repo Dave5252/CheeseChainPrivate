@@ -48,7 +48,7 @@ class HandleData:
         self.getHistAnswerQuery = config["config"]["queries"]["getHistAnswerQuery"]
         self.getAllWorkingItemsQuery = config["config"]["queries"]["getAllWorkingItemsQuery"]
         self.getAllWorkingItemsAfterQuery = config["config"]["queries"]["getAllWorkingItemsAfterQuery"]
-        self.searchFilterAllWorkingItems = ["createdByUser", "createdAt", "id", "name", "slug", "status"]
+        self.searchFilterAllWorkingItems = config["config"]["searchFilterAllWorkingItems"]
         self.nameNewestBackupFile = ""
         self.searchFilterMilkRelated = config["config"]["search_words"]
 
