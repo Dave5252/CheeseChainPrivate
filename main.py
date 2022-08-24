@@ -8,6 +8,8 @@ from HandleData import HandleData
 d = HandleData()
 c = CommunicateToSmartContract()
 
+f = open("Config.json", 'r+', encoding='utf-8')
+config = json.load(f)
 
 def main():
     """
@@ -24,8 +26,7 @@ def main():
         refetchingFreezingAndUpdating()
         new_files, local_names = d.checkForNewFiles()
         creteNewFormOnSC(new_files, local_names)
-        # time.sleep(200)
-        time.sleep(10)
+        time.sleep(config["config"]["fetch_interval"])
 
 
 def refetchingFreezingAndUpdating():

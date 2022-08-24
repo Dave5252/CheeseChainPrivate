@@ -1,5 +1,6 @@
 {
     "config": {
+        "fetch_interval": 10,
         "fromarte": {
             "refresh_token": "eace0fafa0f543e6864054eff4c2e299"
         },
